@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    path, line, circle { fill: none; stroke: #8b7355; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+  <!-- crown base -->
+  <path d="M14 44h36v4H14z" fill="#8b7355" stroke="#8b7355" stroke-width="1.5"/>
+  <!-- crown body -->
+  <path d="M16 44L10 22l12 10 10-16 10 16 12-10-6 22" stroke-width="2" fill="#f4ede4"/>
+  <!-- points -->
+  <circle cx="10" cy="21" r="2.5" fill="#b8860b" stroke="#8b7355" stroke-width="1"/>
+  <circle cx="32" cy="15" r="2.5" fill="#b8860b" stroke="#8b7355" stroke-width="1"/>
+  <circle cx="54" cy="21" r="2.5" fill="#b8860b" stroke="#8b7355" stroke-width="1"/>
+  <!-- detail lines -->
+  <path d="M18 38h28" stroke-width="1" opacity="0.5"/>
+  <path d="M20 34h24" stroke-width="1" opacity="0.3"/>
+</svg>
