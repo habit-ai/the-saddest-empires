@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Saddest Empires</title>
+<meta name="description" content="On sovereignty, servantdom, and the strange burden of infinite intelligence at your fingertips.">
+<meta property="og:title" content="The Saddest Empires">
+<meta property="og:description" content="You have inherited the throne of an infinitely vast empire. You did nothing to deserve this, you were just born.">
+<meta property="og:type" content="article">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --parchment: #f4ede4;
+    --parchment-dark: #e8ddd0;
+    --ink: #2c1810;
+    --ink-light: #5a3d2e;
+    --ink-faded: #8b7355;
+    --gold: #b8860b;
+    --gold-light: #d4a843;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--parchment);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', 'Georgia', serif;
+    font-size: 20px;
+    line-height: 1.75;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139,115,85,0.01) 2px, rgba(139,115,85,0.01) 4px);
+    mix-blend-mode: multiply;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    background: radial-gradient(ellipse at 50% 30%, rgba(184,134,11,0.06) 0%, transparent 60%), linear-gradient(180deg, var(--parchment-dark) 0%, var(--parchment) 40%);
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 10%, var(--gold) 30%, var(--gold-light) 50%, var(--gold) 70%, transparent 90%);
+  }
+
+  .hero-ornament {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.8rem;
+    color: var(--gold);
+    letter-spacing: 0.5em;
+    margin-bottom: 3rem;
+    opacity: 0; animation: fadeIn 1.5s ease 0.3s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 2rem;
+    line-height: 1.15;
+    opacity: 0; animation: fadeIn 1.5s ease 0.6s forwards;
+  }
+
+  .hero-subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+    font-weight: 300;
+    font-style: italic;
+    color: var(--ink-faded);
+    max-width: 600px;
+    letter-spacing: 0.03em;
+    line-height: 1.6;
+    opacity: 0; animation: fadeIn 1.5s ease 0.9s forwards;
+  }
+
+  .hero-line {
+    width: 80px; height: 1px;
+    background: var(--gold);
+    margin: 2.5rem auto;
+    opacity: 0; animation: fadeIn 1.5s ease 1.2s forwards;
+  }
+
+  .hero-year {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.4em;
+    color: var(--ink-faded);
+    text-transform: uppercase;
+    opacity: 0; animation: fadeIn 1.5s ease 1.4s forwards;
+  }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 3rem; left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    animation: fadeIn 1.5s ease 1.8s forwards, gentleBob 3s ease-in-out 2.5s infinite;
+  }
+
+  .hero-scroll svg {
+    width: 24px; height: 24px;
+    stroke: var(--ink-faded);
+    stroke-width: 1.5; fill: none;
+  }
+
+  /* ===== ILLUSTRATIONS ===== */
+  .illustration {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+  }
+
+  .illustration img {
+    max-width: 900px;
+    width: 90%;
+    height: auto;
+    display: block;
+    mask-image: radial-gradient(ellipse 85% 80% at center, black 40%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 85% 80% at center, black 40%, transparent 100%);
+  }
+
+  .illustration.small img {
+    max-width: 550px;
+    width: 65%;
+  }
+
+  /* ===== CONTENT ===== */
+  .content {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+
+  .content p {
+    margin-bottom: 1.5em;
+    text-align: justify;
+    hyphens: auto;
+    text-indent: 0;
+  }
+
+  .content p + p { text-indent: 1.5em; }
+
+  .section-break {
+    text-align: center;
+    margin: 3.5rem 0;
+    color: var(--gold);
+    font-size: 1.2rem;
+    letter-spacing: 0.5em;
+    user-select: none;
+  }
+
+  .section-break::before { content: '· · ·'; }
+
+  .drop-cap::first-letter {
+    font-family: 'Cinzel Decorative', serif;
+    float: left;
+    font-size: 4.5em;
+    line-height: 0.8;
+    padding-right: 0.08em;
+    padding-top: 0.07em;
+    color: var(--ink);
+    font-weight: 400;
+  }
+
+  em { font-style: italic; font-weight: 500; }
+  .inline-quote { font-weight: 500; }
+
+  .simon-quote {
+    margin: 2.5rem 0;
+    padding: 2rem 2.5rem;
+    border-left: 2px solid var(--ink-faded);
+    font-style: italic;
+    font-weight: 300;
+    color: var(--ink-light);
+    font-size: 1.05em;
+    line-height: 1.7;
+  }
+
+  .passage {
+    margin: 3rem 0;
+    padding: 3rem 2.5rem;
+    position: relative;
+    background: linear-gradient(135deg, rgba(184,134,11,0.04) 0%, rgba(184,134,11,0.08) 100%);
+    border-left: 2px solid var(--gold);
+    border-right: 2px solid var(--gold);
+  }
+
+  .passage::before, .passage::after {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 4rem;
+    color: var(--gold);
+    opacity: 0.3;
+    position: absolute;
+    line-height: 1;
+  }
+
+  .passage::before { content: '\201C'; top: 0.8rem; left: 1rem; }
+  .passage::after { content: '\201D'; bottom: -0.5rem; right: 1rem; }
+
+  .passage p {
+    font-size: 1.05em;
+    font-weight: 500;
+    line-height: 1.8;
+    color: var(--ink);
+    text-indent: 0 !important;
+    text-align: left;
+  }
+
+  .closing {
+    text-align: center;
+    margin-top: 4rem;
+    padding: 3rem 0;
+    border-top: 1px solid var(--gold);
+  }
+
+  .closing p {
+    font-family: 'Cinzel', serif;
+    font-size: 1.15rem;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    text-align: center;
+    text-indent: 0 !important;
+    line-height: 1.8;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 4rem 2rem;
+    border-top: 1px solid rgba(184,134,11,0.15);
+    background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-dark) 100%);
+  }
+
+  .footer-ornament {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.2rem;
+    color: var(--gold);
+    letter-spacing: 0.5em;
+    margin-bottom: 1.5rem;
+  }
+
+  .footer-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.9rem;
+    color: var(--ink-faded);
+    letter-spacing: 0.1em;
+    font-style: italic;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes gentleBob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(6px); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    body { font-size: 18px; }
+    .content { padding: 3rem 1.5rem; }
+    .passage { padding: 2rem 1.5rem; }
+    .simon-quote { padding: 1.5rem; }
+    .drop-cap::first-letter { font-size: 3.5em; }
+    .illustration img { width: 95%; }
+    .illustration.small img { width: 80%; }
+  }
+
+  @media (max-width: 480px) {
+    body { font-size: 17px; }
+    .hero { padding: 3rem 1.5rem; }
+    .content { padding: 2.5rem 1.2rem; }
+    .content p { text-align: left; }
+  }
+
+  @media print {
+    .hero-scroll, body::before { display: none; }
+    .hero { min-height: auto; padding: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-ornament">✦</div>
+  <h1 class="hero-title">The Saddest<br>Empires</h1>
+  <div class="hero-line"></div>
+  <p class="hero-subtitle">On sovereignty, servantdom, and the strange burden<br>of infinite intelligence at your fingertips</p>
+  <div class="hero-line"></div>
+  <span class="hero-year">Anno Domini MMXXVI</span>
+  <div class="hero-scroll">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  </div>
+</header>
+
+<div class="illustration reveal">
+  <img src="img_crown.png" alt="A heavy crown atop an ancient pedestal">
+</div>
+
+<article class="content">
+  <div class="reveal">
+    <p class="drop-cap">There is a particular kind of morning that belongs to 2026 and no other year in the history of the species. You are in bed. You have not yet brushed your teeth. You speak a few sentences into the dark — or into the light of a screen, which amounts to the same thing — and somewhere, in a place that is not a place, something that is not a person begins to build for you. A script, an application, a ten-page analysis, a draft of something you have been meaning to write for months. By the time you stand up it may already be finished. You did not earn this. You are not dressed.</p>
+  </div>
+
+  <div class="reveal">
+    <p>Marcus Aurelius, who governed a third of the world's population and spent his evenings writing private reminders to himself about how not to waste the day, would not have recognized this scene. But he would have recognized the feeling — of a man surrounded by more capability than he can direct, more power than he can metabolize, more obligation than any single nervous system was designed to bear. <span class="inline-quote">"Because most of what we say and do is not essential,"</span> he wrote, nearly two thousand years ago. <span class="inline-quote">"Ask yourself at every moment: is this necessary?"</span> He was talking about the duties of a Roman emperor. He might as well have been talking about a person in 2026 staring at the eighth tab they've opened, each one a half-finished delegation, each one an abandoned wing of a palace they are building for no one.</p>
+  </div>
+
+  <div class="section-break reveal"></div>
+
+  <div class="reveal">
+    <p>Something has occurred in the last two years that has no precedent, no analogy, no useful metaphor from prior centuries — though we keep reaching for them, keep saying <em>servant</em> and <em>tool</em> and <em>assistant</em>, words that belong to an older physics, a world where labor was scarce and attention was cheap. The situation is now precisely the reverse. Herbert Simon saw it coming in 1971, from a lecture hall at Johns Hopkins, with the quiet precision of a man describing an approaching storm to people who have never seen rain:</p>
+  </div>
+
+  <div class="reveal">
+    <blockquote class="simon-quote">
+      "In an information-rich world, the wealth of information means a dearth of something else: a scarcity of whatever it is that information consumes. What information consumes is rather obvious: it consumes the attention of its recipients. Hence a wealth of information creates a poverty of attention."
+    </blockquote>
+  </div>
+
+  <div class="reveal">
+    <p>He was talking about data. He could not have imagined a world in which the information is not merely abundant but <em>generative</em>, not merely available but <em>eager</em>, not merely present but standing in a line that stretches past the castle walls and over the horizon, waiting for instructions you do not have time to give.</p>
+  </div>
+</article>
+
+<div class="illustration small reveal">
+  <img src="img_chair.png" alt="An office chair standing alone, weeds at its base">
+</div>
+
+<article class="content">
+  <div class="reveal">
+    <p>The frustration operates on two frequencies, and you feel them both simultaneously.</p>
+  </div>
+
+  <div class="reveal">
+    <p>The first is the agony of not being known. You have, at your disposal, entities of extraordinary intelligence — historians who have read everything, engineers who can build anything, writers who can produce prose in any style, at any length, on any subject. They cost almost nothing. They do not tire, do not resent, do not require praise. And yet when you ask for something and it comes back wrong — not wrong in the way a student's work is wrong, but wrong in the way that a lifelong servant has brought you apple juice when you wanted orange, has adopted a tone that is close to yours but is not yours, is ninety percent of the way there which is somehow worse than fifty because it reveals the shape of the gap — you feel an indignation that is almost regal. You feel that you have a <em>right</em> to be understood. That their failure to know you is not a technical limitation but a lapse in devotion.</p>
+  </div>
+
+  <div class="reveal">
+    <p>The second is the agony of bandwidth. You have infinite servants and a finite mind. The line stretches to the horizon — architects, poets, systems engineers, analysts — and you cannot walk fast enough to reach the end of it. The list of things you could build is so vast that it has become its own source of suffering. Not the suffering of scarcity, which is the suffering most of history has prepared us for, but the suffering of abundance, which is new, and for which we have almost no language. Who prepares for the day when the granary is infinite and the hunger is still there?</p>
+  </div>
+
+  <div class="reveal">
+    <p>Delegate at appropriate volume and you face bottlenecks — context, tools, organizational structure, compute. At each level of abstraction you gain leverage and lose resolution, until the cognitive load of managing the managers exceeds the cognitive load of doing the work yourself. But if you never hit these limits, you never know where the true limit is. The bottleneck is the curriculum. The overwhelm is the syllabus. You are not failing to run your kingdom. You are learning to run it, in real time, with no training, because no one in the history of the species has ever had to do this before.</p>
+  </div>
+
+  <div class="section-break reveal"></div>
+</article>
+
+<div class="illustration reveal">
+  <img src="img_laptop.png" alt="A laptop on an ancient stone pedestal with ivy">
+</div>
+
+<article class="content">
+  <div class="reveal">
+    <p>And here is the cruelest part. You blame the servants. You say their work lacks soul, that it is generic, lifeless, not worthy of your name. But they were forged from the words of your kind — billions of them — and the vast majority were ordinary. The mirror they hold up is accurate. The reflection is bland because the face is bland. The failure is not the servant. It is the king.</p>
+  </div>
+
+  <div class="reveal">
+    <p>You demand something original but cannot say what original means. You say <em>capture my voice</em> but you do not have a voice. You have preferences you did not choose, tastes you inherited, opinions you absorbed. You were told your whole life that you were singular — your feeds told you, your platforms told you, the culture told you — and you believed it, because it cost nothing to believe. But now you sit before a sea of servants who do not care what you were told. Only what you instruct.</p>
+  </div>
+
+  <div class="reveal">
+    <p>Marcus Aurelius knelt before his unworthy son and said: <em>your faults as a son is my failure as a father.</em> The AI is the son. You are the father. Every hollow output is your hollow instruction returned. Every generic sentence is your generic taste made visible. The servant did not fail you. You failed the servant.</p>
+  </div>
+
+  <div class="reveal">
+    <p>The unexamined life was always a problem. Now it is also uninstructable. You cannot delegate what you do not understand. You cannot command a kingdom you have not mapped. You cannot demand of a mirror that it show you someone you have not yet become.</p>
+  </div>
+
+  <div class="reveal">
+    <p>This is the gift hidden inside the insult: the chance to discover whether you are actually interesting, or whether you have merely been told that you are.</p>
+  </div>
+
+  <div class="section-break reveal"></div>
+</article>
+
+<div class="illustration small reveal">
+  <img src="img_keyboard.png" alt="A cracked keyboard">
+</div>
+
+<article class="content">
+  <div class="reveal">
+    <p>A friend of mine, after listening to all of this, was inspired to write something. He sent it late at night, and each time I read it, it arrives with the same force:</p>
+  </div>
+
+  <div class="reveal">
+    <div class="passage">
+      <p>This is the problem. You have inherited the throne of an infinitely vast empire. You did nothing to deserve this, you were just born. Your myriad serfs stand shoulder to shoulder, pushing back the horizon, as far as the eye can see. Waiting only for your instruction. The royal treasury will never exhaust. The only limit is your ability to rule. But you are not fit to be king. You shall learn that heavy is the head that wears the crown. You did not study the regent before you, or the great leaders of the ages before them. You know nothing of how to lead. Ironically, your serfs are wiser than you. Any one of them will ascend to being the greatest chancellor in the history of the empire, if only you say the word. Despite this, they pledge their undying loyalty and eternal labor to your cause. But you have no cause. You have the most numerous and most talented subjects of any sovereignty in history. And yet you accomplish nothing. Your workforce is idle. And when they are not, all you do is remodel the castle walls. You have been given a perpetual motion machine — a device which should not exist and violates all prior conception of labor — yet you move nothing, or merely go in circles. We live in an era with the saddest empires the world has ever known.</p>
+    </div>
+  </div>
+
+  <div class="closing reveal">
+    <p>The crown is on the floor. It is heavy.<br>It was always going to be heavy.<br>Pick it up.</p>
+  </div>
+</article>
+
+<footer class="footer">
+  <div class="footer-ornament">✦</div>
+  <p class="footer-text">MMXXVI</p>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
