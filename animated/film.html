@@ -5,15 +5,73 @@
 <title>The Saddest Empires, the film</title>
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="fonts/fonts-extra.css">
 <style>
   :root { --bg: #ffffff; }            /* LineScene fills with --bg: white, so it multiplies cleanly onto paper */
   html, body { margin: 0; background: #000; overflow: hidden; }
+  #stage { position: relative; width: 1920px; height: 1080px; }
   #film { display: block; width: 1920px; height: 1080px; }
   .offstage { position: fixed; left: 0; top: 0; width: 1920px; height: 1080px; visibility: hidden; pointer-events: none; }
+
+  /* ---------- type ---------- */
+  #type { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .tscene { position: absolute; inset: 0; display: none; }
+  .ln, .label {
+    position: absolute; left: 0; top: 0; white-space: nowrap; line-height: 1;
+    font-kerning: normal; font-optical-sizing: auto;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "onum" 1;
+    text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased;
+  }
+  .ln { box-sizing: content-box; }
+  .ln .sizer { visibility: hidden; }
+  .ln .ink, .ln .bloom { position: absolute; inset: 0; padding: inherit; box-sizing: border-box; }
+  .ln .halo { position: absolute; left: 0; top: 0; padding: inherit; }
+  /* the reveal: a soft edge running along the line, intersected with an ink texture so it prints like letterpress */
+  .ln .ink {
+    -webkit-mask-image: linear-gradient(90deg, #000 var(--a), transparent var(--b)), url(assets/ink.png);
+            mask-image: linear-gradient(90deg, #000 var(--a), transparent var(--b)), url(assets/ink.png);
+    -webkit-mask-size: 100% 100%, 256px 256px; mask-size: 100% 100%, 256px 256px;
+    -webkit-mask-repeat: no-repeat, repeat; mask-repeat: no-repeat, repeat;
+    -webkit-mask-composite: source-in; mask-composite: intersect;
+  }
+  /* the bloom: ink spreading at the leading edge before it settles */
+  .ln .bloom {
+    filter: blur(0.09em); opacity: var(--bloom);
+    -webkit-mask-image: linear-gradient(90deg, transparent var(--c), #000 var(--d), transparent var(--e));
+            mask-image: linear-gradient(90deg, transparent var(--c), #000 var(--d), transparent var(--e));
+  }
+  .ln.day .body   { color: #21140d; text-shadow: 0 1px 0 rgba(255, 250, 240, .55), 0 -0.5px 0 rgba(40, 20, 10, .18); }
+  .ln.day .bloom  { color: #3a2418; }
+  .ln.day .halo   { color: rgba(247, 241, 230, .96); filter: blur(18px); }
+  .ln.night .body { color: #f1e8d8; text-shadow: 0 0 1px rgba(241, 232, 216, .35); }
+  .ln.night .bloom{ color: #f6eee0; }
+  .ln.night .halo { color: rgba(6, 6, 12, .9); filter: blur(18px); }
+  .ln.v-hand .halo { display: none; }
+  .ln.v-hand .body { color: #2a1a10; text-shadow: 0 0 0.6px rgba(42, 26, 16, .5); }
+  .hang { display: inline; }
+  .sc { font-variant-caps: all-small-caps; letter-spacing: .1em; }
+  /* gold leaf: a gradient clipped to the letters, with a sheen that crosses once the words have landed */
+  .gold {
+    background-image: linear-gradient(100deg, #6a4506 0%, #94670f 36%, #c8973a 50%, #94670f 64%, #6a4506 100%);
+    background-size: 320% 100%; background-position: var(--sheen, 70%) 0;
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent !important; -webkit-text-fill-color: transparent; text-shadow: none !important;
+  }
+  .night .gold {
+    background-image: linear-gradient(100deg, #b98b34 0%, #dcb35a 36%, #fff0c2 50%, #dcb35a 64%, #b98b34 100%);
+  }
+  .v-hand .gold { background-image: linear-gradient(100deg, #8a5a08 0%, #c08a2a 36%, #f0cd7a 50%, #c08a2a 64%, #8a5a08 100%); }
+  .ln .halo .gold { background: none; -webkit-text-fill-color: currentColor; color: inherit !important; }
+  .label.day { color: #3a2618; }
+  .label.night { color: #eadfcb; }
+  .label .gold-initial, .label .gold-card { --sheen: 60%; }
 </style>
 </head>
 <body>
-<canvas id="film" width="1920" height="1080"></canvas>
+<div id="stage">
+  <canvas id="film" width="1920" height="1080"></canvas>
+  <div id="type"></div>
+</div>
 <canvas id="line-a" class="offstage"></canvas>
 <canvas id="line-b" class="offstage"></canvas>
 <canvas id="line-c" class="offstage"></canvas>

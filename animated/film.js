@@ -933,242 +933,424 @@
 
 
   /* ============================================================ TYPE
-     The text is the essay, so it is set, not captioned: large, broken by hand into lines,
-     and revealed like ink running along a line. {gold} marks emphasis, *italic* marks stress. */
-  const TYPE = { ink: '#21140d', moon: '#f1e8d8', goldInk: '#9a6a0c', goldMoon: '#e6bd62', paperGlow: 'rgba(247,241,230,.92)', nightGlow: 'rgba(8,8,14,.85)' };
-  const LINE_CACHE = new Map();
-  const scratch = mk(W, 400), sg = scratch.getContext('2d');
-  function parseRuns(text) {
-    const runs = []; const re = /(\{[^}]+\}|\*[^*]+\*)/g; let last = 0, m;
-    while ((m = re.exec(text))) {
-      if (m.index > last) runs.push({ t: text.slice(last, m.index) });
-      const inner = m[0].slice(1, -1);
-      runs.push(m[0][0] === '{' ? { t: inner, gold: true, italic: true } : { t: inner, italic: true });
-      last = m.index + m[0].length;
+     The text is the essay, so it is set, not captioned. It is real text laid over the image, so
+     it gets the typeface's own features: old-style figures, small capitals, ligatures, kerning.
+     Three voices: the narrator (Cormorant Garamond), quotations (IM Fell English, a 17th-century
+     type that matches the engravings), and the friend's letter (La Belle Aurore, by hand).
+     Markup inside a line: {gold}, *italic*, [small caps]. */
+  const TYPE_ROOT = document.getElementById('type');
+  const VOICE = {
+    narrator: { family: '"Cormorant Garamond"', weight: 500 },
+    quote: { family: '"IM Fell English"', weight: 400 },
+    hand: { family: '"La Belle Aurore"', weight: 400 },
+  };
+  const MARGIN = 190;                       // one left margin for every left-set passage
+  const LINES = [];                         // every line set in the film, for the score to follow
+  const MARKS = [];                         // named moments, for the score
+  const mark = (sceneIdx, name, t, extra = {}) => MARKS.push(Object.assign({ sceneIdx, name, t }, extra));
+  function markup(text) {
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    let h = esc(text)
+      .replace(/\{([^}]+)\}/g, '<span class="gold"><i>$1</i></span>')
+      .replace(/\*([^*]+)\*/g, '<i>$1</i>')
+      .replace(/\[([^\]]+)\]/g, '<span class="sc">$1</span>');
+    // hanging punctuation: an opening quote or dash sits outside the measure
+    h = h.replace(/^(“|‘|—\s?|…)/, '<span class="hang">$1</span>');
+    return h;
+  }
+  const BASELINE = new Map();
+  function baselineOf(voice, size) {
+    const key = voice + size;
+    if (BASELINE.has(key)) return BASELINE.get(key);
+    const probe = document.createElement('div');
+    probe.className = 'ln probe'; probe.style.fontFamily = VOICE[voice].family; probe.style.fontWeight = VOICE[voice].weight;
+    probe.style.fontSize = size + 'px'; probe.innerHTML = 'Hxg<span style="display:inline-block;width:0;height:0"></span>';
+    TYPE_ROOT.appendChild(probe);
+    const b = probe.lastChild.offsetTop; probe.remove();
+    BASELINE.set(key, b); return b;
+  }
+  // One passage of hand-broken lines. Each line unfolds in turn, the passage holds, then lifts away.
+  class Passage {
+    constructor(sceneIdx, o) {
+      Object.assign(this, { voice: 'narrator', size: 84, lh: 1.22, align: 'left', x: MARGIN, pace: 0.034, gap: 0 }, o);
+      this.sceneIdx = sceneIdx;
+      this.hand = this.voice === 'hand';
+      if (this.hand) this.pace = o.pace || 0.075;             // a pen is slower than a press
+      let t = this.at;
+      this.times = this.lines.map((ln) => {
+        const plain = ln.replace(/[{}*[\]]/g, '');
+        const dur = this.hand ? plain.length * this.pace : clamp(plain.length * this.pace, 0.75, 2.1);
+        const at = t;
+        t += this.hand ? dur + 0.45 : dur * 0.72 + (/[,—:;…]$/.test(plain) ? 0.35 : 0.55) + this.gap;
+        return [at, dur];
+      });
+      this.arrived = this.times.length ? this.times[this.times.length - 1][0] + this.times[this.times.length - 1][1] : this.at;
+      if (this.hold !== undefined) this.out = this.arrived + this.hold;
+      this.lines.forEach((ln, i) => LINES.push({ sceneIdx, t: this.times[i][0] + this.times[i][1] * 0.55, voice: this.voice, gold: /\{/.test(ln), start: this.times[i][0], dur: this.times[i][1], night: !!this.night }));
+      this.els = null;
     }
-    if (last < text.length) runs.push({ t: text.slice(last) });
-    return runs;
-  }
-  function setLine(text, size, o) {
-    const key = [text, size, o.night, o.italic, o.weight].join('|');
-    if (LINE_CACHE.has(key)) return LINE_CACHE.get(key);
-    const runs = parseRuns(text), pad = Math.round(size * 0.6);
-    const font = (r) => `${r.italic || o.italic ? 'italic ' : ''}${o.weight || 500} ${size}px "Cormorant Garamond"`;
-    sg.fontKerning = 'normal';
-    let w = 0; runs.forEach((r) => { sg.font = font(r); r.w = sg.measureText(r.t).width; w += r.w; });
-    const img = mk(Math.ceil(w + pad * 2), Math.ceil(size * 1.6 + pad));
-    const g = img.getContext('2d'); g.fontKerning = 'normal'; g.textBaseline = 'alphabetic';
-    const base = pad / 2 + size * 1.15;
-    let x = pad;
-    runs.forEach((r) => {
-      g.font = font(r);
-      if (r.gold) {
-        const gr = g.createLinearGradient(x, base - size, x + r.w, base);
-        const c0 = o.night ? '#c99a3e' : '#8a5c08', c1 = o.night ? '#f3d88f' : '#b8841c';
-        gr.addColorStop(0, c0); gr.addColorStop(0.5, c1); gr.addColorStop(1, c0);
-        g.fillStyle = gr;
-      } else g.fillStyle = o.night ? TYPE.moon : TYPE.ink;
-      g.fillText(r.t, x, base); x += r.w;
-    });
-    const blur = mk(img.width, img.height), bg = blur.getContext('2d');
-    bg.filter = `blur(${Math.round(size * 0.12)}px)`; bg.drawImage(img, 0, 0);
-    const halo = mk(img.width, img.height), hg = halo.getContext('2d');
-    hg.filter = `blur(${Math.round(size * 0.35)}px)`; hg.drawImage(img, 0, 0);
-    hg.filter = 'none'; hg.globalCompositeOperation = 'source-in'; hg.fillStyle = o.night ? TYPE.nightGlow : TYPE.paperGlow; hg.fillRect(0, 0, img.width, img.height);
-    const L = { img, blur, halo, w, pad, base, size };
-    LINE_CACHE.set(key, L); return L;
-  }
-  // draw one set line, revealed to p (0..1): a sharp body, an ink bloom at the leading edge
-  function inkLine(c, L, x, yBase, p, alpha = 1, halo = true) {
-    if (p <= 0 || alpha <= 0) return;
-    const iw = L.img.width, ih = L.img.height;
-    const edge = Math.max(90, L.size * 1.6);
-    const pos = lerp(L.pad - edge * 0.2, L.pad + L.w + edge, p);  // leading edge in line pixels
-    const dx = x - L.pad, dy = yBase - L.base + (1 - easeOut(clamp(p * 1.4))) * L.size * 0.08;
-    const stop = (v) => clamp(v / iw);
-    const mask = (img, a0, a1, a2) => {
-      sg.globalCompositeOperation = 'source-over'; sg.clearRect(0, 0, iw, ih); sg.drawImage(img, 0, 0);
-      sg.globalCompositeOperation = 'destination-in';
-      const gr = sg.createLinearGradient(0, 0, iw, 0);
-      a0.forEach(([v, a]) => gr.addColorStop(stop(v), `rgba(0,0,0,${a})`));
-      sg.fillStyle = gr; sg.fillRect(0, 0, iw, ih);
-      sg.globalCompositeOperation = 'source-over';
-    };
-    if (halo) { // a quiet glow of paper behind the letters, for legibility on any ground
-      mask(L.halo, [[0, 1], [pos - edge * 0.2, 1], [pos + 1, 0]]);
-      c.globalAlpha = alpha * 0.9; c.drawImage(scratch, 0, 0, iw, ih, dx, dy, iw, ih);
+    build(container) {
+      const v = VOICE[this.voice];
+      this.els = this.lines.map((ln) => {
+        const el = document.createElement('div');
+        el.className = `ln ${this.night ? 'night' : 'day'} v-${this.voice}`;
+        el.style.fontFamily = v.family; el.style.fontWeight = v.weight; el.style.fontSize = this.size + 'px';
+        const html = markup(ln);
+        el.innerHTML = `<span class="sizer" aria-hidden="true">${html}</span><span class="ink"><span class="halo" aria-hidden="true">${html}</span><span class="body">${html}</span></span>${this.hand ? '' : `<span class="bloom" aria-hidden="true">${html}</span>`}`;
+        container.appendChild(el);
+        return el;
+      });
+      // measure once: width, and how far a hanging mark reaches into the margin
+      this.geo = this.els.map((el) => {
+        const hang = el.querySelector('.sizer .hang');
+        return { w: el.querySelector('.sizer').offsetWidth, hang: hang ? hang.offsetWidth : 0 };
+      });
     }
-    mask(L.img, [[0, 1], [Math.max(0, pos - edge), 1], [pos, 0]]);
-    c.globalAlpha = alpha; c.drawImage(scratch, 0, 0, iw, ih, dx, dy, iw, ih);
-    if (p < 1) {
-      mask(L.blur, [[Math.max(0, pos - edge * 1.4), 0], [Math.max(0, pos - edge * 0.45), 0.9], [pos + edge * 0.15, 0]]);
-      c.globalAlpha = alpha * 0.85; c.drawImage(scratch, 0, 0, iw, ih, dx, dy, iw, ih);
+    update(lt, y0Override) {
+      if (!this.els) return;
+      const pad = this.size * 0.6, base = baselineOf(this.voice, this.size);
+      const exit = this.out === undefined ? 0 : seg(lt, this.out, this.out + 0.9);
+      const lineH = this.size * this.lh;
+      const blockH = this.lines.length * lineH;
+      let top = this.valign === 'middle' ? this.y - blockH / 2 : this.y;
+      this.els.forEach((el, i) => {
+        const [at, dur] = this.times[i], g = this.geo[i];
+        const p = this.hand ? clamp((lt - at) / dur) : ease(seg(lt, at, at + dur));
+        if (lt < at || exit >= 1) { el.style.display = 'none'; return; }
+        el.style.display = 'block';
+        const indent = (this.indent && this.indent[i]) || 0;
+        let x = this.align === 'center' ? this.x - g.w / 2 : this.align === 'right' ? this.x - g.w : this.x + indent;
+        x -= g.hang;                                              // the hanging mark sits in the margin
+        const baselineY = (this.baselines && this.baselines[i] !== undefined) ? this.baselines[i] : top + this.size * 0.95 + i * lineH;
+        const settle = this.hand ? 0 : (1 - easeOut(clamp(p * 1.3))) * this.size * 0.07;
+        el.style.transform = `translate(${(x - pad).toFixed(1)}px, ${(baselineY - base - pad * 0.5 + settle - exit * 16).toFixed(1)}px)`;
+        el.style.padding = `${pad * 0.5}px ${pad}px`;
+        el.style.opacity = (this.alpha ?? 1) * (1 - ease(exit)) * (this.fade ? this.fade(lt) : 1);
+        // the reveal: sharp body behind a soft edge; for the hand, a narrow pen edge
+        const edge = this.hand ? this.size * 0.35 : Math.max(90, this.size * 1.5);
+        const pos = pad + lerp(-edge * 0.2, g.w + edge, p);
+        el.style.setProperty('--a', `${(pos - edge).toFixed(1)}px`);
+        el.style.setProperty('--b', `${pos.toFixed(1)}px`);
+        el.style.setProperty('--c', `${(pos - edge * 1.4).toFixed(1)}px`);
+        el.style.setProperty('--d', `${(pos - edge * 0.45).toFixed(1)}px`);
+        el.style.setProperty('--e', `${(pos + edge * 0.15).toFixed(1)}px`);
+        el.style.setProperty('--bloom', p < 1 ? 0.85 : 0);
+        // gold leaf: once a gold phrase has landed, a slow sheen crosses it
+        const landed = lt - (at + dur);
+        const sh = landed < 0 ? 100 : 100 - ((landed * 38) % 260);
+        el.style.setProperty('--sheen', `${sh}%`);
+      });
     }
-    c.globalAlpha = 1;
-  }
-  // a block of hand-broken lines: each unfolds in turn, the block holds, then lifts away
-  function passage(c, lt, b) {
-    const size = b.size || 84, lh = size * (b.lh || 1.2);
-    let t = b.at;
-    const times = b.lines.map((ln) => {
-      const plain = ln.replace(/[{}*]/g, '');
-      const dur = clamp(plain.length * (b.pace || 0.034), 0.75, 2.1);
-      const at = t; t += dur * 0.72 + (/[,—:;]$/.test(plain) ? 0.35 : 0.55) + (b.gap || 0);
-      return [at, dur];
-    });
-    const outT = b.out ?? Infinity;
-    const exit = seg(lt, outT, outT + 0.9);
-    if (exit >= 1 || lt < b.at) return;
-    const h = b.lines.length * lh;
-    const y0 = (b.valign === 'middle' ? b.y - h / 2 : b.y) + size * 0.95 - exit * 16;
-    b.lines.forEach((ln, i) => {
-      const L = setLine(ln, size, b);
-      const [at, dur] = times[i];
-      const p = ease(seg(lt, at, at + dur));
-      const x = b.align === 'center' ? b.x - L.w / 2 : b.align === 'right' ? b.x - L.w : b.x;
-      inkLine(c, L, x, y0 + i * lh, p, (b.alpha ?? 1) * (1 - ease(exit)), b.halo !== false);
-    });
-  }
-  // when a passage will have fully arrived (for timing the next one)
-  function arrives(b) {
-    let t = b.at, end = b.at;
-    b.lines.forEach((ln) => {
-      const plain = ln.replace(/[{}*]/g, ''), dur = clamp(plain.length * (b.pace || 0.034), 0.75, 2.1);
-      end = t + dur; t += dur * 0.72 + (/[,—:;]$/.test(plain) ? 0.35 : 0.55) + (b.gap || 0);
-    });
-    return end;
-  }
-  // a small label in capitals, for the one place the film names a source
-  function label(c, lt, at, text, x, y, o = {}) {
-    const k = ease(seg(lt, at, at + 1.2)) * (1 - ease(seg(lt, o.out ?? 1e9, (o.out ?? 1e9) + 0.8)));
-    if (k <= 0) return;
-    c.font = '400 22px "Cinzel"'; c.letterSpacing = '7px'; c.textAlign = o.align || 'left'; c.textBaseline = 'middle';
-    c.fillStyle = o.night ? 'rgba(233,223,204,.7)' : 'rgba(80,56,40,.75)'; c.globalAlpha = k; c.fillText(text, x, y);
-    c.globalAlpha = 1; c.letterSpacing = '0px'; c.textAlign = 'left';
   }
 
-  /* ============================================================ THE TYPE STUDY (a short cut) */
+  // small capitals label (source lines, chapter names)
+  class Label {
+    constructor(o) { Object.assign(this, { size: 30, voice: 'narrator', align: 'center', tracking: 0.22 }, o); this.el = null; }
+    build(container) {
+      const el = document.createElement('div');
+      el.className = `label ${this.night ? 'night' : 'day'}`;
+      el.style.fontFamily = this.font || VOICE[this.voice].family; el.style.fontSize = this.size + 'px';
+      el.style.letterSpacing = this.tracking + 'em';
+      el.innerHTML = this.html; container.appendChild(el); this.el = el;
+      this.w = el.offsetWidth;
+    }
+    update(lt) {
+      const k = ease(seg(lt, this.at, this.at + (this.dur || 1.2))) * (1 - ease(seg(lt, this.out ?? 1e9, (this.out ?? 1e9) + 0.8)));
+      this.el.style.display = k <= 0 ? 'none' : 'block';
+      const x = this.align === 'center' ? this.x - this.w / 2 : this.x;
+      this.el.style.transform = `translate(${x}px, ${this.y}px)`;
+      this.el.style.opacity = k;
+      this.el.style.filter = `blur(${((1 - k) * 4).toFixed(2)}px)`;
+    }
+  }
+
+  // text layers per scene: built lazily, shown only while the scene is on screen
+  function typeLayer(s) {
+    if (!s.type) return null;
+    if (!s.typeEl) {
+      s.typeEl = document.createElement('div'); s.typeEl.className = 'tscene'; TYPE_ROOT.appendChild(s.typeEl);
+      s.typeEl.style.display = 'block';            // must be laid out to be measured
+      s.type.forEach((p) => p.build(s.typeEl));
+    }
+    return s.typeEl;
+  }
+
+  /* ------------------------------------------------------------ ornaments drawn on the canvas */
+  function rule(c, x0, x1, y, k, color) {
+    const m = (x0 + x1) / 2, h = (x1 - x0) / 2 * ease(k);
+    c.strokeStyle = color; c.lineWidth = 1.2; c.globalAlpha = 0.8;
+    c.beginPath(); c.moveTo(m - h, y); c.lineTo(m + h, y); c.stroke();
+    c.globalAlpha = 1;
+  }
+  function initialFrame(c, x, y, s, k, color, lt) {
+    // an engraved square for the illuminated initial: double rule, hatching, a vine that grows
+    const e = new Etch();
+    e.add(rect(x, y, s, s), 1.6); e.add(rect(x + 9, y + 9, s - 18, s - 18), 0.9);
+    // a vine that runs round the inside of the frame, never across the letter
+    const vine = []; const inset = 20, side = s - inset * 2;
+    for (let i = 0; i <= 160; i++) {
+      const u = i / 160 * 4, k = Math.floor(u), f = u - k, wob = Math.sin(f * PI * 4) * 5;
+      const pts = [[x + inset + f * side, y + inset + wob], [x + s - inset + wob, y + inset + f * side], [x + s - inset - f * side, y + s - inset + wob], [x + inset + wob, y + s - inset - f * side]];
+      vine.push(pts[Math.min(k, 3)]);
+    }
+    e.add(vine, 1, 0.7);
+    for (let i = 6; i < 160; i += 10) { const [vx, vy] = vine[i]; e.add(ellipsePts(vx, vy, 4, 2.2, (i % 20) * 0.3, (i % 20) * 0.3 + TAU, 12), 0.7, 0.6); }
+    e.addAll(hatch([[x + 12, y + 12], [x + s - 12, y + 12], [x + s - 12, y + s - 12], [x + 12, y + s - 12]], 45, 9, 0, 4), 0.5, 0.16);
+    e.draw(c, k, color);
+  }
+  function lamp(c, cx, cy, r, a) {
+    c.save(); c.globalCompositeOperation = 'screen';
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(255,196,120,${0.34 * a})`); g.addColorStop(0.5, `rgba(200,130,60,${0.12 * a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
+  }
+
+  /* ============================================================ THE STUDY (?cut=type) */
   const CUT = new URLSearchParams(location.search).get('cut');
   let GLASS_R, lineC;
   if (CUT === 'type') {
     S.length = 0;
+    const idx = () => S.length;                 // index the next scene will have
 
-    // I · the morning
-    const m1 = { at: 1.4, x: 200, y: 250, size: 92, night: true, lines: ['There is a particular kind of morning', 'that belongs to {2026}', 'and no other year', 'in the history of the species.'] };
-    m1.out = arrives(m1) + 2.4;
-    const m2 = { at: m1.out + 1.1, x: 200, y: 330, size: 92, night: true, lines: ['You speak a few sentences', '*into the dark —*'] };
-    m2.out = arrives(m2) + 2.2;
-    scene(m2.out + 1.6, (c, t) => {
-      paper(c, 'dark'); stars(c, t, 160, 3, 0.7);
-      const gx = 1560, gy = 860;
-      c.save(); c.globalCompositeOperation = 'screen';
-      const gl = c.createRadialGradient(gx, gy, 0, gx, gy, 520);
-      gl.addColorStop(0, 'rgba(160,182,228,.5)'); gl.addColorStop(0.35, 'rgba(80,100,150,.14)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
-      c.fillStyle = gl; c.fillRect(0, 0, W, H); c.restore();
-      c.fillStyle = 'rgba(214,226,248,.92)'; c.fillRect(gx - 30, gy - 52, 60, 104);
-      // the spoken words leave the screen as letters
-      const letters = 'ascripttenpageanalysisadraftofsomethingyouhavebeenmeaningtowrite', r = rng(31);
-      c.font = 'italic 34px "Cormorant Garamond"'; c.textBaseline = 'middle';
-      for (let i = 0; i < 120; i++) {
-        const born = m2.at + 0.6 + r() * 5.5, life = 3.4 + r() * 2, dx = (r() - 0.6) * 700, sway = r() * TAU;
-        const k = (t - born) / life; if (k < 0 || k > 1) { r(); continue; }
-        c.globalAlpha = Math.sin(k * PI) * 0.7; c.fillStyle = MOON;
-        c.fillText(letters[i % letters.length], gx + dx * easeOut(k) + Math.sin(t * 1.3 + sway) * 18, gy - 80 - k * 640); r();
-      }
-      c.globalAlpha = 1;
-    }, { text: (c, t) => { passage(c, t, m1); passage(c, t, m2); } });
+    function card(numeral, title, tone, night) {
+      const i = idx();
+      const L1 = new Label({ at: 0.3, dur: 1.4, x: CX, y: 370, size: 160, font: '"Cinzel Decorative"', tracking: 0.05, html: `<span class="gold gold-card">${numeral}</span>`, night });
+      const L2 = new Label({ at: 1.0, dur: 1.2, x: CX, y: 575, size: 40, tracking: 0.32, html: `<span class="sc">${title}</span>`, night });
+      mark(i, 'card', 0.3, { numeral });
+      scene(4.2, (c, t) => {
+        paper(c, tone); if (night) stars(c, t, 120, 11, 0.5);
+        rule(c, CX - 330, CX - 110, 548, seg(t, 0.9, 2.2), night ? MOON : INK);
+        rule(c, CX + 110, CX + 330, 548, seg(t, 0.9, 2.2), night ? MOON : INK);
+      }, { type: [L1, L2] });
+    }
 
-    // II · the line
-    const l1 = { at: 1.2, x: CX, y: 120, size: 80, align: 'center', lines: ['not merely present,', 'but standing in a line'] };
-    l1.out = arrives(l1) + 2.0;
-    const l2 = { at: l1.out + 0.9, x: CX, y: 120, size: 80, align: 'center', lines: ['that stretches past the castle walls', 'and over the horizon,'] };
-    l2.out = arrives(l2) + 2.2;
-    const l3 = { at: l2.out + 0.9, x: CX, y: 120, size: 80, align: 'center', lines: ['waiting for instructions', 'you do not have {time to give.}'] };
-    l3.out = arrives(l3) + 3.0;
-    scene(l3.out + 1.4, (c, t, d) => {
-      paper(c, 'day');
-      const p = seg(t, 0.3, d - 1.2), z = ease(seg(p, 0.04, 0.95));
-      const visible = p < 0.08 ? 1 : Math.exp(lerp(0, Math.log(lineC.o.count), Math.pow(easeOut(seg(p, 0.08, 0.92)), 1.6)));
-      drawLine(c, lineC, { zoom: lerp(2.3, 1.05, z), focus: z, visible });
-      // a haze of paper across the sky, so the words never sit on the drawing
-      const hz = c.createLinearGradient(0, 0, 0, 380);
-      hz.addColorStop(0, 'rgba(246,240,229,.94)'); hz.addColorStop(0.6, 'rgba(246,240,229,.8)'); hz.addColorStop(1, 'rgba(246,240,229,0)');
-      c.fillStyle = hz; c.fillRect(0, 0, W, 380);
-    }, { text: (c, t) => { passage(c, t, l1); passage(c, t, l2); passage(c, t, l3); } });
+    // I · The Morning
+    card('I', 'The Morning', 'dark', true);
+    {
+      const i = idx(), s = 92, lh = 1.22, cap = s * lh * 3 - 14;
+      const m1 = new Passage(i, { at: 1.6, size: s, lh, night: true, x: MARGIN, y: 230,
+        indent: [cap + 26, cap + 26, cap + 26, 0],
+        lines: ['[here is] a particular kind of morning', 'that belongs to {2026}', 'and no other year', 'in the history of the species.'] });
+      m1.out = m1.arrived + 2.6;
+      const T = new Label({ at: 0.9, dur: 1.6, x: MARGIN + 18, y: 230 + 10, align: 'left', size: cap * 0.84, font: '"Cinzel Decorative"', tracking: 0, html: '<span class="gold gold-initial">T</span>', night: true, out: m1.out });
+      const m2 = new Passage(i, { at: m1.out + 1.2, size: s, night: true, x: MARGIN, y: 300, lines: ['You speak a few sentences', '*into the dark —*'], hold: 2.6 });
+      const m3 = new Passage(i, { at: m2.out + 1.0, size: s, night: true, x: MARGIN, y: 300, lines: ['You did not earn this.', 'You are not dressed.'], hold: 2.8 });
+      mark(i, 'initial', 0.9);
+      scene(m3.out + 1.6, (c, t) => {
+        paper(c, 'dark'); stars(c, t, 150, 3, 0.65);
+        initialFrame(c, MARGIN, 230 + 14, cap, ease(seg(t, 0.2, 2.4)) * (1 - seg(t, m1.out, m1.out + 0.9)), '#c9a45a', t);
+        const gx = 1600, gy = 850;
+        c.save(); c.globalCompositeOperation = 'screen';
+        const gl = c.createRadialGradient(gx, gy, 0, gx, gy, 520);
+        gl.addColorStop(0, 'rgba(160,182,228,.5)'); gl.addColorStop(0.35, 'rgba(80,100,150,.14)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = gl; c.fillRect(0, 0, W, H); c.restore();
+        c.fillStyle = 'rgba(214,226,248,.92)'; c.fillRect(gx - 30, gy - 52, 60, 104);
+        const letters = 'ascripttenpageanalysisadraftofsomethingyouhavebeenmeaningtowrite', r = rng(31);
+        c.font = 'italic 34px "Cormorant Garamond"'; c.textBaseline = 'middle';
+        for (let k = 0; k < 120; k++) {
+          const born = m2.at + 0.8 + r() * 7, life = 3.4 + r() * 2, dx = (r() - 0.7) * 700, sway = r() * TAU;
+          const q = (t - born) / life; if (q < 0 || q > 1) { r(); continue; }
+          c.globalAlpha = Math.sin(q * PI) * 0.6; c.fillStyle = MOON;
+          c.fillText(letters[k % letters.length], gx + dx * easeOut(q) + Math.sin(t * 1.3 + sway) * 18, gy - 80 - q * 640); r();
+        }
+        c.globalAlpha = 1;
+      }, { type: [T, m1, m2, m3] });
+    }
 
-    // III · the glass
-    const g1 = { valign: 'middle', at: 1.0, x: 160, y: 560, size: 86, lines: ['a lifelong servant', 'has brought you apple juice', 'when you wanted orange —'] };
-    g1.out = arrives(g1) + 1.8;
-    const g2 = { valign: 'middle', at: g1.out + 0.9, x: 160, y: 560, size: 86, lines: ['is ninety percent', 'of the way there,'] };
-    g2.out = arrives(g2) + 1.6;
-    const g3 = { valign: 'middle', at: g2.out + 0.9, x: 160, y: 560, size: 86, lines: ['which is somehow', 'worse than fifty,', 'because it reveals', '{the shape of the gap.}'] };
-    g3.out = arrives(g3) + 3.4;
-    scene(g3.out + 1.4, (c, t) => {
-      paper(c, 'day');
-      G.cx = 1390;
-      GLASS_R.draw(c, ease(seg(t, 0.2, 1.8)), INK);
-      const BOT = 452, TOP = 186, lvl = (f) => lerp(BOT, TOP, f);
-      const aF = ease(seg(t, g1.at + 0.8, g1.at + 3.2)) - ease(seg(t, g1.out - 0.2, g1.out + 0.9));
-      const oF = 0.5 * ease(seg(t, g2.at, g2.at + 1.2)) + 0.4 * ease(seg(t, g2.at + 1.6, g2.at + 2.8));
-      const inside = gP([[214, 186], [232, 446], [300, 458], [368, 446], [386, 186]]);
-      const fill = (f, col, line) => {
-        if (f <= 0.001) return;
-        c.save(); c.beginPath(); inside.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.clip();
-        const y = gY(lvl(f));
-        c.fillStyle = col; c.fillRect(0, y, W, H);
-        c.strokeStyle = line; c.lineWidth = 1; c.globalAlpha = 0.7;
-        for (let yy = y + 3; yy < gY(460); yy += 5) { c.beginPath(); c.moveTo(gX(200), yy); c.lineTo(gX(400), yy); c.stroke(); }
-        c.globalAlpha = 1; c.lineWidth = 1.6; c.beginPath(); c.ellipse(G.cx, y, lerp(68, 86, f) * GS, 10 * GS, 0, 0, TAU); c.stroke();
-        c.restore();
+    // II · The Line
+    card('II', 'The Line', 'day');
+    {
+      const i = idx();
+      const q = new Passage(i, { at: 1.2, voice: 'quote', size: 70, lh: 1.26, x: MARGIN, y: 250,
+        lines: ['“In an information-rich world,', 'the wealth of information', 'means a dearth of something else …', 'Hence a wealth of information', 'creates a {poverty of attention.}”'] });
+      q.out = q.arrived + 3.2;
+      const src = new Label({ at: q.arrived - 0.2, x: MARGIN, y: 250 + 70 * 1.26 * 5 + 50, align: 'left', size: 30, voice: 'quote', font: '"IM Fell English SC"', tracking: 0.14, html: 'Herbert Simon, 1971', out: q.out });
+      mark(i, 'dim', q.arrived - 1.0);
+      scene(q.out + 1.6, (c, t) => {
+        paper(c, 'day');
+        candle(c, 1480, 820, 320, t, 1 - 0.7 * seg(t, q.arrived - 1.2, q.out));
+        const r = rng(77), N = Math.floor(Math.min(90, Math.exp(Math.max(0, t - 3) * 0.7)));
+        for (let k = 0; k < N; k++) {
+          let x = 1100 + r() * 800, y = r() * H; const a = (r() - 0.5) * 0.7, w = 110 + r() * 70, h = w * 1.3;
+          if (Math.abs(x - 1480) < 180 && y > 380) x += 360;
+          const born = Math.log(k + 1) / 0.7 + 3, kk = easeOut(seg(t, born, born + 0.35));
+          c.save(); c.translate(x, y); c.rotate(a); c.globalAlpha = kk;
+          c.fillStyle = 'rgba(250,245,235,.97)'; c.fillRect(-w / 2, -h / 2, w, h); c.strokeStyle = INK; c.lineWidth = 1; c.strokeRect(-w / 2, -h / 2, w, h);
+          c.globalAlpha = kk * 0.4; for (let l = 0; l < 10; l++) { c.beginPath(); c.moveTo(-w / 2 + 12, -h / 2 + 20 + l * (h - 36) / 10); c.lineTo(w / 2 - 14 - r() * 30, -h / 2 + 20 + l * (h - 36) / 10); c.stroke(); }
+          c.restore();
+        }
+      }, { type: [q, src] });
+    }
+    {
+      const i = idx();
+      const l1 = new Passage(i, { at: 1.2, size: 84, x: CX, y: 96, align: 'center', lines: ['not merely present,', 'but standing in a line'], hold: 2.2 });
+      const l2 = new Passage(i, { at: l1.out + 0.9, size: 84, x: CX, y: 96, align: 'center', lines: ['that stretches past the castle walls'] });
+      // "and over the horizon," is set ON the horizon, and rides it as the camera pulls back
+      const l2b = new Passage(i, { at: l2.arrived + 0.4, size: 84, x: 250, y: 0, lines: ['and over the horizon,'] });
+      l2.out = l2b.out = l2b.arrived + 2.6;
+      const l3 = new Passage(i, { at: l2.out + 0.9, size: 84, x: CX, y: 96, align: 'center', lines: ['waiting for instructions', 'you do not have {time to give.}'], hold: 3.2 });
+      const cam = (t, d) => {
+        const p = seg(t, 0.3, d - 1.2), z = ease(seg(p, 0.04, 0.95));
+        return { p, z, zoom: lerp(2.3, 1.05, z) };
       };
-      fill(aF, 'rgba(226,214,140,.9)', '#8f8424');
-      fill(oF, 'rgba(240,164,92,.92)', '#b8521a');
-      const gtime = g3.at + 2.6, g = ease(seg(t, gtime, gtime + 1.4));
-      if (g > 0) {
-        c.save(); c.shadowColor = 'rgba(240,200,90,.9)'; c.shadowBlur = 18; c.strokeStyle = '#d9a73a'; c.lineWidth = 3.4; c.globalAlpha = g;
-        c.beginPath(); c.ellipse(G.cx, gY(214), 84 * GS, 11 * GS, 0, 0, TAU); c.stroke();
-        c.beginPath(); c.moveTo(gX(214), gY(186)); c.lineTo(gX(216), gY(214)); c.moveTo(gX(386), gY(186)); c.lineTo(gX(384), gY(214)); c.stroke();
+      const horizonY = (t, d) => {
+        const { z, zoom } = cam(t, d), a = lineC.anchor();
+        const ty = H * 0.52 + (a.y - H * 0.52) * z;
+        const drift = 1 + 0.035 * clamp(t / d);                   // the scene drift, applied to the image
+        return CY + ((ty + (lineC.hy - a.y) * zoom) - CY) * drift;
+      };
+      const d = l3.out + 1.4;
+      l2b.baselines = [0];
+      l2b.fade = () => 1;
+      const upd = l2b.update.bind(l2b);
+      l2b.update = (lt) => { l2b.baselines[0] = Math.max(horizonY(lt, d) - 6, 300); upd(lt); };
+      scene(d, (c, t) => {
+        paper(c, 'day');
+        const { p, z, zoom } = cam(t, d);
+        const visible = p < 0.08 ? 1 : Math.exp(lerp(0, Math.log(lineC.o.count), Math.pow(easeOut(seg(p, 0.08, 0.92)), 1.6)));
+        drawLine(c, lineC, { zoom, focus: z, visible });
+        const hz = c.createLinearGradient(0, 0, 0, 360);
+        hz.addColorStop(0, 'rgba(246,240,229,.94)'); hz.addColorStop(0.6, 'rgba(246,240,229,.8)'); hz.addColorStop(1, 'rgba(246,240,229,0)');
+        c.fillStyle = hz; c.fillRect(0, 0, W, 360);
+      }, { type: [l1, l2, l2b, l3] });
+      mark(i, 'line', 0.3, { d });
+    }
+
+    // III · The Gap
+    card('III', 'The Gap', 'day');
+    {
+      const i = idx(), s = 88;
+      const g1 = new Passage(i, { at: 1.0, size: s, valign: 'middle', y: 560, lines: ['a lifelong servant', 'has brought you apple juice', 'when you wanted orange —'] });
+      g1.out = g1.arrived + 1.8;
+      const g2 = new Passage(i, { at: g1.out + 0.9, size: s, valign: 'middle', y: 560, lines: ['is ninety percent', 'of the way there,'] });
+      g2.out = g2.arrived + 1.6;
+      const g3 = new Passage(i, { at: g2.out + 0.9, size: s, valign: 'middle', y: 560, lines: ['which is somehow', 'worse than fifty,', 'because it reveals', '{the shape of the gap.}'] });
+      g3.out = g3.arrived + 4.2;
+      const goldLine = g3.times[3];
+      const apple = [g1.at + 0.8, g1.at + 3.2], drain = [g1.out - 0.2, g1.out + 0.9], o50 = [g2.at, g2.at + 1.2], o90 = [g2.at + 1.8, g2.at + 3.0];
+      mark(i, 'pour', apple[0], { d: apple[1] - apple[0] }); mark(i, 'pour', o50[0], { d: o50[1] - o50[0] }); mark(i, 'pour', o90[0], { d: o90[1] - o90[0] });
+      mark(i, 'gap', goldLine[0]);
+      scene(g3.out + 1.4, (c, t) => {
+        paper(c, 'day');
+        G.cx = 1390;
+        GLASS_R.draw(c, ease(seg(t, 0.2, 1.8)), INK);
+        const BOT = 452, TOP = 186, lvl = (f) => lerp(BOT, TOP, f);
+        const aF = ease(seg(t, ...apple)) - ease(seg(t, ...drain));
+        const oF = 0.5 * ease(seg(t, ...o50)) + 0.4 * ease(seg(t, ...o90));
+        const inside = gP([[214, 186], [232, 446], [300, 458], [368, 446], [386, 186]]);
+        const fill = (f, col, line) => {
+          if (f <= 0.001) return;
+          c.save(); c.beginPath(); inside.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.clip();
+          const y = gY(lvl(f));
+          c.fillStyle = col; c.fillRect(0, y, W, H);
+          c.strokeStyle = line; c.lineWidth = 1; c.globalAlpha = 0.7;
+          for (let yy = y + 3; yy < gY(460); yy += 5) { c.beginPath(); c.moveTo(gX(200), yy); c.lineTo(gX(400), yy); c.stroke(); }
+          c.globalAlpha = 1; c.lineWidth = 1.6; c.beginPath(); c.ellipse(G.cx, y, lerp(68, 86, f) * GS, 10 * GS, 0, 0, TAU); c.stroke();
+          c.restore();
+        };
+        fill(aF, 'rgba(226,214,140,.9)', '#8f8424');
+        fill(oF, 'rgba(240,164,92,.92)', '#b8521a');
+        // the gold phrase and the gold gap are drawn by the same hand, at the same moment
+        const k = ease(seg(t, goldLine[0], goldLine[0] + goldLine[1] + 0.4));
+        if (k > 0) {
+          c.save(); c.shadowColor = 'rgba(240,200,90,.9)'; c.shadowBlur = 18; c.strokeStyle = '#d4a13a'; c.lineWidth = 3.2;
+          new Etch().add(gP(ellipsePts(300, 214, 84, 11, PI, PI * 3, 90)), 2.4).add(gP([[214, 186], [216, 214]]), 2.4).add(gP([[386, 186], [384, 214]]), 2.4)
+            .draw(c, k, '#d4a13a');
+          c.restore();
+          // a hairline leader, from the words to the gap, as on an engraved plate
+          const yLead = 560 + (88 * 1.22 * 4) / 2 - 88 * 0.3;
+          const x0 = 820, x1 = gX(212), y1 = gY(200);
+          const lk = ease(seg(t, goldLine[0] + goldLine[1] * 0.8, goldLine[0] + goldLine[1] + 1.2));
+          if (lk > 0) {
+            c.strokeStyle = 'rgba(176,128,30,.85)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x0, yLead);
+            const mx = lerp(x0, x1, 0.55);
+            const pts = []; for (let u = 0; u <= 1.0001; u += 0.02) { const a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, cc = u * u; pts.push([a * x0 + b * mx + cc * x1, a * yLead + b * yLead + cc * y1]); }
+            new Etch().add(pts, 1.0).draw(c, lk, 'rgba(176,128,30,.9)');
+            if (lk > 0.98) { c.fillStyle = '#b8841c'; c.beginPath(); c.arc(x1, y1, 3.5, 0, TAU); c.fill(); }
+          }
+        }
+        G.cx = CX;
+      }, { type: [g1, g2, g3] });
+    }
+
+    // IV · The Letter
+    card('IV', 'The Letter', 'night', true);
+    {
+      const i = idx();
+      const sheet = { x: 330, y: 170, w: 1260, h: 780, rot: -1.6 };
+      const h1 = new Passage(i, { voice: 'hand', at: 2.4, size: 80, lh: 1.42, x: sheet.x + 110, y: sheet.y + 100,
+        lines: ['Despite this, they pledge', 'their undying loyalty', 'and eternal labor to your cause.'] });
+      const h2 = new Passage(i, { voice: 'hand', at: h1.arrived + 1.4, size: 112, lh: 1.3, x: sheet.x + 110, y: sheet.y + 480, pace: 0.11, lines: ['But you have {no cause.}'] });
+      const lampOut = [h2.arrived + 1.0, h2.arrived + 3.6];
+      h1.fade = (t) => 1 - seg(t, ...lampOut);
+      h2.fade = (t) => 1 - 0.55 * seg(t, lampOut[1] + 1.2, lampOut[1] + 3.5);
+      const silence = h2.arrived + 0.2;
+      mark(i, 'write', h1.at, { d: h1.arrived - h1.at }); mark(i, 'write', h2.at, { d: h2.arrived - h2.at });
+      mark(i, 'silence', silence, { d: 4.2 });
+      const d = lampOut[1] + 4.2;
+      scene(d, (c, t) => {
+        paper(c, 'night');
+        const light = 1 - seg(t, ...lampOut);
+        stars(c, t, 120, 13, 0.4 * light);
+        lamp(c, 1500, 180, 1200, light);
+        // the sheet, lit by the lamp
+        c.save(); c.translate(sheet.x + sheet.w / 2, sheet.y + sheet.h / 2); c.rotate(sheet.rot * PI / 180);
+        c.globalAlpha = light * ease(seg(t, 0, 1.2));
+        c.shadowColor = 'rgba(0,0,0,.6)'; c.shadowBlur = 40; c.shadowOffsetY = 18;
+        c.drawImage(PAPER.day, 200, 100, sheet.w, sheet.h, -sheet.w / 2, -sheet.h / 2, sheet.w, sheet.h);
+        c.shadowColor = 'transparent';
+        const warm = c.createRadialGradient(sheet.w * 0.25, -sheet.h * 0.5, 50, 0, 0, sheet.w * 0.9);
+        warm.addColorStop(0, 'rgba(255,214,150,.0)'); warm.addColorStop(1, 'rgba(40,24,10,.45)');
+        c.globalCompositeOperation = 'multiply'; c.fillStyle = warm; c.fillRect(-sheet.w / 2, -sheet.h / 2, sheet.w, sheet.h);
+        c.globalCompositeOperation = 'source-over'; c.strokeStyle = 'rgba(120,90,60,.25)'; c.lineWidth = 1;
+        for (let r2 = 0; r2 < 9; r2++) { const y = -sheet.h / 2 + 160 + r2 * 72; c.beginPath(); c.moveTo(-sheet.w / 2 + 80, y); c.lineTo(sheet.w / 2 - 80, y); c.stroke(); }
         c.restore();
-      }
-      G.cx = CX;
-    }, { text: (c, t) => { passage(c, t, g1); passage(c, t, g2); passage(c, t, g3); } });
+      }, { type: [h1, h2], typeRotate: sheet.rot, typeOrigin: [sheet.x + sheet.w / 2, sheet.y + sheet.h / 2] });
+    }
 
-    // IV · the letter
-    const n1 = { at: 1.4, x: CX, y: 300, size: 64, align: 'center', night: true, alpha: 0.82, lines: ['Despite this, they pledge their undying loyalty', 'and eternal labor to your cause.'] };
-    n1.out = arrives(n1) + 1.6;
-    const n2 = { at: n1.out + 1.3, x: CX, y: CY, valign: 'middle', size: 150, align: 'center', night: true, pace: 0.07, gap: 0.5, lines: ['But you have', '{no cause.}'] };
-    n2.out = arrives(n2) + 3.6;
-    scene(n2.out + 1.4, (c, t) => { paper(c, 'night'); stars(c, t, 220, 7, 0.8); }, {
-      text: (c, t) => { label(c, t, 0.5, 'A LETTER, SENT LATE AT NIGHT', CX, 170, { align: 'center', night: true, out: n1.out }); passage(c, t, n1); passage(c, t, n2); },
-    });
+    // V · The Crown
+    card('V', 'The Crown', 'first');
+    {
+      const i = idx(), s = 88, y0 = 230, lh = s * 1.24;
+      const k1 = new Passage(i, { at: 5.4, size: s, x: MARGIN, y: y0, lines: ['The crown is on the floor.'] });
+      const k2 = new Passage(i, { at: 8.2, size: s, x: MARGIN, y: y0 + lh, lines: ['It is heavy.'] });
+      const k3 = new Passage(i, { at: 10.4, size: s, x: MARGIN, y: y0 + lh * 2, lines: ['It was always going to be heavy.'] });
+      const k4 = new Passage(i, { at: 14.4, size: 116, x: MARGIN, y: y0 + lh * 3 + 40, pace: 0.08, lines: ['{Pick it up.}'] });
+      [k1, k2, k3].forEach((k) => (k.out = 20.0)); k4.out = 23.2;
+      mark(i, 'land', 3.7); mark(i, 'pick', k4.at);
+      const gleamAt = k4.at + k4.times[0][1];
+      scene(25, (c, t) => {
+        paper(c, 'first');
+        c.save();
+        const s2 = 0.78, ox = 1330 - 700 * s2, oy = 205;
+        c.translate(ox, oy); c.scale(s2, s2);
+        c.strokeStyle = INK; for (let r2 = 0; r2 < 14; r2++) { c.globalAlpha = 0.5 - r2 * 0.032; c.lineWidth = 1.3; const y = 1000 + Math.pow(r2, 1.5) * 4.4; c.beginPath(); c.moveTo(-1400, y); c.lineTo(2400, y); c.stroke(); }
+        c.globalAlpha = 1;
+        c.drawImage(IMG.column, 340, 445, 720, 555);
+        const tip = ease(seg(t, 1.6, 2.7)), fall = seg(t, 2.7, 3.7), settle = seg(t, 3.7, 4.5);
+        let x = -22 * tip, y = -6 * tip, rot = -16 * tip;
+        if (fall > 0) { x = lerp(-22, -420, easeOut(fall)); y = lerp(-6, 290, fall * fall); rot = lerp(-16, -94, easeOut(fall)); }
+        if (settle > 0) { const b = Math.sin(settle * PI) * (1 - settle); x = -420 - 14 * easeOut(settle); y = 290 - 38 * b; rot = -94 + 4 * easeOut(settle) - 5 * b; }
+        c.fillStyle = `rgba(58,34,24,${0.22 * seg(t, 3.5, 4.5)})`; c.beginPath(); c.ellipse(70, 1004, 210, 16, 0, 0, TAU); c.fill();
+        c.save(); c.translate(440 + 250 + x, 93 + 392 + y); c.rotate(rot * PI / 180);
+        c.globalAlpha = 0.75; c.drawImage(IMG.crown, -250, -392, 500, 392); c.globalAlpha = 1;
+        c.drawImage(GOLD_CROWN, -250, -392, 500, 392);
+        // the crown answers "Pick it up." with a slow gleam
+        const gl = seg(t, gleamAt - 0.3, gleamAt + 2.2);
+        c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.45 + 0.25 * Math.sin(t * 1.3) + 0.6 * Math.sin(gl * PI);
+        c.drawImage(GOLD_CROWN, -250, -392, 500, 392);
+        c.restore(); c.restore();
+        if (gl > 0 && gl < 1) lamp(c, ox + (440 + 250 - 434) * s2, oy + 800 * s2, 520, Math.sin(gl * PI) * 0.8);
+      }, { type: [k1, k2, k3, k4] });
+    }
 
-    // V · the crown
-    const k1 = { at: 5.6, x: 170, y: 250, size: 84, lines: ['The crown is on the floor.'] };
-    const k2 = { at: 8.4, x: 170, y: 250 + 84 * 1.25, size: 84, lines: ['It is heavy.'] };
-    const k3 = { at: 10.6, x: 170, y: 250 + 84 * 2.5, size: 84, lines: ['It was always going to be heavy.'] };
-    const k4 = { at: 14.6, x: 170, y: 250 + 84 * 4.1, size: 104, pace: 0.08, lines: ['{Pick it up.}'] };
-    [k1, k2, k3].forEach((k) => (k.out = 19.2)); k4.out = 21.5;
-    scene(23.2, (c, t) => {
-      paper(c, 'first');
-      c.save();
-      const s2 = 0.78, ox = 1330 - 700 * s2, oy = 205;
-      c.translate(ox, oy); c.scale(s2, s2);
-      c.strokeStyle = INK; for (let i = 0; i < 14; i++) { c.globalAlpha = 0.5 - i * 0.032; c.lineWidth = 1.3; const y = 1000 + Math.pow(i, 1.5) * 4.4; c.beginPath(); c.moveTo(-1400, y); c.lineTo(2400, y); c.stroke(); }
-      c.globalAlpha = 1;
-      c.drawImage(IMG.column, 340, 445, 720, 555);
-      // the crown tips off the LEFT edge, toward the words
-      const tip = ease(seg(t, 1.6, 2.7)), fall = seg(t, 2.7, 3.7), settle = seg(t, 3.7, 4.5);
-      let x = -22 * tip, y = -6 * tip, rot = -16 * tip;
-      if (fall > 0) { x = lerp(-22, -420, easeOut(fall)); y = lerp(-6, 290, fall * fall); rot = lerp(-16, -94, easeOut(fall)); }
-      if (settle > 0) { const b = Math.sin(settle * PI) * (1 - settle); x = -420 - 14 * easeOut(settle); y = 290 - 38 * b; rot = -94 + 4 * easeOut(settle) - 5 * b; }
-      const down = seg(t, 3.5, 4.5);
-      c.fillStyle = `rgba(58,34,24,${0.22 * down})`; c.beginPath(); c.ellipse(700 - 434 - 196, 1004, 210, 16, 0, 0, TAU); c.fill();
-      c.save(); c.translate(440 + 250 + x, 93 + 392 + y); c.rotate(rot * PI / 180);
-      c.globalAlpha = 0.75; c.drawImage(IMG.crown, -250, -392, 500, 392); c.globalAlpha = 1;
-      c.drawImage(GOLD_CROWN, -250, -392, 500, 392);
-      c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.5 + 0.3 * Math.sin(t * 1.3); c.drawImage(GOLD_CROWN, -250, -392, 500, 392);
-      c.restore(); c.restore();
-    }, { text: (c, t) => { [k1, k2, k3, k4].forEach((k) => passage(c, t, k)); } });
+    // end
+    {
+      const e1 = new Label({ at: 0.5, dur: 1.6, x: CX, y: 430, size: 66, font: '"Cormorant Garamond"', tracking: 0.3, html: '<span class="sc">The Saddest Empires</span>' });
+      const e2 = new Label({ at: 1.5, dur: 1.4, x: CX, y: 535, size: 42, tracking: 0.02, html: '<i>an essay by Samuel Salzer</i>' });
+      const e3 = new Label({ at: 2.3, dur: 1.4, x: CX, y: 600, size: 26, tracking: 0.3, html: '<span class="sc">mmxxvi</span>' });
+      scene(7, (c) => { paper(c, 'first'); }, { type: [e1, e2, e3] });
+    }
   }
 
   /* ------------------------------------------------------------ timeline */
@@ -1194,7 +1376,17 @@
       if (s.text) s.text(c, lt, s.d);
       const a = k === 0 ? 1 : ease(seg(T, s.t0, s.t0 + XF));
       out.globalAlpha = a; out.drawImage(buf, 0, 0);
+      const layer = typeLayer(s);
+      if (layer) {
+        // the outgoing scene's words leave as the incoming image arrives
+        const next = active[k + 1];
+        const ta = next ? 1 - ease(seg(T, next.t0, next.t0 + XF * 0.8)) : a;
+        layer.style.display = 'block'; layer.style.opacity = ta;
+        if (s.typeRotate) { layer.style.transformOrigin = `${s.typeOrigin[0]}px ${s.typeOrigin[1]}px`; layer.style.transform = `rotate(${s.typeRotate}deg)`; }
+        s.type.forEach((p) => p.update(lt));
+      }
     });
+    S.forEach((s) => { if (s.typeEl && !active.includes(s)) s.typeEl.style.display = 'none'; });
     out.globalAlpha = 1;
     // vignette + grain
     const v = out.createRadialGradient(CX, CY, H * 0.35, CX, CY, H * 1.05);
@@ -1206,11 +1398,12 @@
     // fade in from black, fade out to black
     const fade = Math.min(seg(T, 0, 1.6), 1 - seg(T, DURATION - 2.2, DURATION));
     if (fade < 1) { out.globalAlpha = 1 - fade; out.fillStyle = '#000'; out.fillRect(0, 0, W, H); out.globalAlpha = 1; }
+    TYPE_ROOT.style.opacity = fade;
   }
 
   const ready = (async () => {
     await loaded;
-    await Promise.all(['italic 400 40px "Cormorant Garamond"', '400 40px "Cormorant Garamond"', 'italic 500 40px "Cormorant Garamond"', '500 40px "Cormorant Garamond"', '400 40px "Cinzel"'].map((f) => document.fonts.load(f)));
+    await Promise.all(['italic 400 40px "Cormorant Garamond"', '400 40px "Cormorant Garamond"', 'italic 500 40px "Cormorant Garamond"', '500 40px "Cormorant Garamond"', '400 40px "Cinzel"', '400 40px "IM Fell English"', 'italic 400 40px "IM Fell English"', '400 40px "IM Fell English SC"', '700 40px "Cinzel Decorative"', '400 40px "La Belle Aurore"'].map((f) => document.fonts.load(f)));
     buildPaper(); buildGrain();
     FACADE = buildFacade(); TABLET = buildTablet(); GLASS = buildGlass();
     G.cx = 1390; GLASS_R = buildGlass(); G.cx = CX;
@@ -1224,15 +1417,19 @@
   })();
 
   // cue points for the score: scene starts, plus a few moments that deserve a sound
-  const cues = () => ({
+  const cues = () => (CUT === 'type' ? {
+    cut: 'type', duration: DURATION,
+    scenes: S.map((s) => ({ t0: +s.t0.toFixed(3), d: s.d })),
+    lines: LINES.map((l) => ({ t: +(S[l.sceneIdx].t0 + l.t).toFixed(3), start: +(S[l.sceneIdx].t0 + l.start).toFixed(3), dur: +l.dur.toFixed(3), voice: l.voice, gold: l.gold, scene: l.sceneIdx })),
+    marks: MARKS.map((m) => Object.assign({}, m, { t: +(S[m.sceneIdx].t0 + m.t).toFixed(3) })),
+  } : {
     duration: DURATION,
     scenes: S.map((s) => +s.t0.toFixed(2)),
-    cut: CUT || 'full',
-    crownLand: CUT === 'type' ? +(S[4].t0 + 3.7).toFixed(2) : +(S[S.length - 2].t0 + 4.5).toFixed(2),
-    title: S[2] ? +(S[2].t0 + 1).toFixed(2) : 0,
-    night: CUT === 'type' ? +S[3].t0.toFixed(2) : +(S[19].t0 + 2).toFixed(2),
-    firstLight: CUT === 'type' ? +S[4].t0.toFixed(2) : +S[S.length - 2].t0.toFixed(2),
-    pick: CUT === 'type' ? +(S[4].t0 + 14.6).toFixed(2) : +(S[S.length - 2].t0 + 16).toFixed(2),
+    crownLand: +(S[S.length - 2].t0 + 4.5).toFixed(2),
+    title: +(S[2].t0 + 1).toFixed(2),
+    night: +(S[19].t0 + 2).toFixed(2),
+    firstLight: +S[S.length - 2].t0.toFixed(2),
+    pick: +(S[S.length - 2].t0 + 16).toFixed(2),
   });
 
   window.FILM = { ready, render, duration: () => DURATION, cues };

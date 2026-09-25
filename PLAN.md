@@ -42,6 +42,19 @@ is an 86-second study of five moments built around a typesetting engine in `film
 - `{gold}` marks the emphasis (*2026*, *time to give*, *the shape of the gap*, *no cause*, *Pick it up*); `*italic*` marks stress.
 - The type is drawn on its own pass outside the camera drift, so it never scales or shimmers. A paper (or night) glow sits behind the letters.
 - If this direction holds, the full film is re-set with this engine.
+
+**Study 2 (same day).** Samuel approved every text and score idea except narration:
+- The text is now live typeset text over the image, not painted pixels. That gives the typefaces' own features: old-style figures, true small caps,
+  ligatures and kerning, and hanging punctuation.
+- Three typographic voices: the narrator in Cormorant Garamond, quotations in IM Fell English, and the friend's letter in La Belle Aurore, written by hand on a lamplit sheet.
+- The ink reveal is intersected with an ink texture, so it prints like letterpress, and the gold emphasis carries a slow gold-leaf sheen.
+- Chapter cards (I–V) and an illuminated initial open the film.
+- Words touch the image: "and over the horizon," rides the horizon line; "the shape of the gap" draws its gold outline and a leader into the glass;
+  the lamp goes out after "no cause." and the score falls silent; the crown gleams on "Pick it up."
+- Score (`tools/score2.py`): written as MIDI and played on FluidR3 piano, strings, cello, celesta and harp through fluidsynth.
+  An empire motif (A–G–F–D) resolves to D major only on "Pick it up." The Line ostinato gains layers as the servants multiply;
+  the glass phrase stops on the unresolved leading tone; a solo cello carries the letter. Each text line lands on a note from the current chord.
+  Quiet synthesised foley: a page turn per chapter, juice pouring, a pen writing, the crown hitting stone.
  the hosted essay is a reworked version of the vault draft. It has a new "mirror / the failure is the king"
 passage, and it drops the Tuesday line, the Force Quit dialog, "Everyone is a king" and the Marcus/Simon extended beats.
 The storyboard below was written from the vault draft. Rows 10, 14, 18, 20, 24–25 and 32 have no text to hang on in the
