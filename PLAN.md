@@ -13,6 +13,23 @@ lamplit letter. Serve the repo root locally and open `/animated/`.
 - The servant, crown and column art is cut from the existing engravings (`assets/`), so no new art was needed yet.
 - `prefers-reduced-motion` shows each scene's final frame; mobile has its own layout.
 
+## The film (2026-09-25)
+
+The first MP4 was a screen recording of the scrolling page: mostly paragraphs, with three pictures. Samuel's verdict: useless as a
+visual essay. The film is a separate, purpose-built piece:
+
+- `animated/film.html` + `film.js`: 31 full-frame scenes on one 1920×1080 canvas. Every frame is a pure function of time.
+  Open it in a browser to preview it in real time (`?t=120` starts at 2:00).
+- Every beat of the hosted essay has its own animated image. The text is cut to short lines of the essay's own words, set as titles.
+- The art: engravings drawn line by line (palace, tablet, glass, mirror, wall), the servant sprites (the Line, the balance,
+  the hierarchy losing resolution), the existing ruins and laptop plates (slow camera moves, a night treatment for the ruins),
+  and the crown and column.
+- Light follows the essay's day: dark morning, parchment, dusk, night for the letter, first light for the crown.
+- Score: `tools/score.py` synthesises an ambient pad from the film's cue times: bells on scene changes, a thud when the crown lands,
+  a resolving chord on "Pick it up." It's a placeholder until there's a real composer or licensed track.
+- Render: `tools/record-film.js` (frames) → `tools/score.py` (audio) → ffmpeg:
+  `ffmpeg -framerate 30 -i frames/f%05d.jpg -i score.wav -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest out.mp4`
+
 **Text correction:** the hosted essay is a reworked version of the vault draft. It has a new "mirror / the failure is the king"
 passage, and it drops the Tuesday line, the Force Quit dialog, "Everyone is a king" and the Marcus/Simon extended beats.
 The storyboard below was written from the vault draft. Rows 10, 14, 18, 20, 24–25 and 32 have no text to hang on in the
