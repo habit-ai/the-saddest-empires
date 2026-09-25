@@ -1,6 +1,23 @@
 # The Saddest Empires — Animated Edition: Plan
 
-_Drafted 2026-09-25. Status: proposal, nothing built yet. Next up after this: **Because You Let Us** (same pipeline)._
+_Drafted 2026-09-25. Next up after this: **Because You Let Us** (same pipeline)._
+
+## Status: Phase 1 style frames built (2026-09-25)
+
+`animated/index.html` is the full hosted text, plus three working set pieces, the day-light arc, the margin waves and the
+lamplit letter. Serve the repo root locally and open `/animated/`.
+
+- **The Line**: scroll zooms out from one servant at the gate to 3,200 servants reaching the horizon, counted in Roman numerals.
+- **The Glass**: the glass draws itself, fills with apple juice, drains, fills with orange to 50%, then 90%, and the missing tenth is outlined in gold.
+- **The Crown**: the crown tips off the column and lands on the floor; the closing lines follow; clicking "Pick it up." puts it back on the column.
+- The servant, crown and column art is cut from the existing engravings (`assets/`), so no new art was needed yet.
+- `prefers-reduced-motion` shows each scene's final frame; mobile has its own layout.
+
+**Text correction:** the hosted essay is a reworked version of the vault draft. It has a new "mirror / the failure is the king"
+passage, and it drops the Tuesday line, the Force Quit dialog, "Everyone is a king" and the Marcus/Simon extended beats.
+The storyboard below was written from the vault draft. Rows 10, 14, 18, 20, 24–25 and 32 have no text to hang on in the
+hosted version and need re-cutting before Phase 3. New beats to add from the hosted text: *the mirror is accurate, the face is bland*
+and *Marcus kneeling before his son*.
 
 ## Where we start
 
