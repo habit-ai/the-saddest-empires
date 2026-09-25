@@ -777,8 +777,8 @@
   scene(9.5, (c, t, d) => {
     kenBurns(c, IMG.laptop, t, d, 1.0, 1.14, 0.5, 0.5, 0.5, 0.4);
     c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = 'rgba(250,215,175,.6)'; c.fillRect(0, 0, W, H); c.restore();
-    cap(c, t, 0.4, 4.6, 'Every hollow output is your hollow instruction returned.', { y: 940 });
-    cap(c, t, 4.8, 9.5, 'The servant did not fail you.  You failed the servant.', { y: 940 });
+    cap(c, t, 0.4, 4.6, 'Every hollow output is your hollow instruction returned.', { y: 105 });
+    cap(c, t, 4.8, 9.5, 'The servant did not fail you.  You failed the servant.', { y: 105 });
   });
 
   // 20 · the gift, as night falls

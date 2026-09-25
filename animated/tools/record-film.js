@@ -8,8 +8,16 @@ const FPS = 30, OUT = process.env.OUT;
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
   const p = await b.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, ignoreHTTPSErrors: true });
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-  await p.goto('http://localhost:8765/animated/film.html?record');
-  await p.evaluate(() => window.FILM.ready);
+  // The type must be the real type: reload until both faces are in (Google Fonts can fail transiently).
+  for (let attempt = 1; ; attempt++) {
+    await p.goto('http://localhost:8765/animated/film.html?record');
+    await p.evaluate(() => window.FILM.ready);
+    const ok = await p.evaluate(() => document.fonts.check('italic 40px "Cormorant Garamond"') && document.fonts.check('40px "Cinzel"')
+      && [...document.fonts].some((f) => f.family.includes('Cormorant') && f.status === 'loaded'));
+    if (ok) break;
+    if (attempt >= 6) throw new Error('fonts failed to load');
+    console.log('fonts missing, reloading');
+  }
   const dur = await p.evaluate(() => window.FILM.duration());
   const f0 = Math.round((+process.env.FROM || 0) * FPS), f1 = Math.round((+process.env.TO || dur) * FPS);
   const t0 = Date.now();
