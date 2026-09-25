@@ -298,7 +298,8 @@
     return e;
   }
   // glass geometry in its SVG units, mapped to the frame
-  const GS = 1.55, gX = (x) => CX + (x - 300) * GS, gY = (y) => 575 + (y - 360) * GS;
+  const G = { cx: CX }; // the glass can be placed off-centre
+  const GS = 1.55, gX = (x) => G.cx + (x - 300) * GS, gY = (y) => 575 + (y - 360) * GS;
   const gP = (pts) => pts.map(([x, y]) => [gX(x), gY(y)]);
   function buildGlass() {
     const e = new Etch();
@@ -930,6 +931,246 @@
     words(c, 'MMXXVI', CX, 640, { t: t - 2.2, size: 24, font: 'cinzel', tracking: 10, color: '#8a7362' });
   });
 
+
+  /* ============================================================ TYPE
+     The text is the essay, so it is set, not captioned: large, broken by hand into lines,
+     and revealed like ink running along a line. {gold} marks emphasis, *italic* marks stress. */
+  const TYPE = { ink: '#21140d', moon: '#f1e8d8', goldInk: '#9a6a0c', goldMoon: '#e6bd62', paperGlow: 'rgba(247,241,230,.92)', nightGlow: 'rgba(8,8,14,.85)' };
+  const LINE_CACHE = new Map();
+  const scratch = mk(W, 400), sg = scratch.getContext('2d');
+  function parseRuns(text) {
+    const runs = []; const re = /(\{[^}]+\}|\*[^*]+\*)/g; let last = 0, m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) runs.push({ t: text.slice(last, m.index) });
+      const inner = m[0].slice(1, -1);
+      runs.push(m[0][0] === '{' ? { t: inner, gold: true, italic: true } : { t: inner, italic: true });
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) runs.push({ t: text.slice(last) });
+    return runs;
+  }
+  function setLine(text, size, o) {
+    const key = [text, size, o.night, o.italic, o.weight].join('|');
+    if (LINE_CACHE.has(key)) return LINE_CACHE.get(key);
+    const runs = parseRuns(text), pad = Math.round(size * 0.6);
+    const font = (r) => `${r.italic || o.italic ? 'italic ' : ''}${o.weight || 500} ${size}px "Cormorant Garamond"`;
+    sg.fontKerning = 'normal';
+    let w = 0; runs.forEach((r) => { sg.font = font(r); r.w = sg.measureText(r.t).width; w += r.w; });
+    const img = mk(Math.ceil(w + pad * 2), Math.ceil(size * 1.6 + pad));
+    const g = img.getContext('2d'); g.fontKerning = 'normal'; g.textBaseline = 'alphabetic';
+    const base = pad / 2 + size * 1.15;
+    let x = pad;
+    runs.forEach((r) => {
+      g.font = font(r);
+      if (r.gold) {
+        const gr = g.createLinearGradient(x, base - size, x + r.w, base);
+        const c0 = o.night ? '#c99a3e' : '#8a5c08', c1 = o.night ? '#f3d88f' : '#b8841c';
+        gr.addColorStop(0, c0); gr.addColorStop(0.5, c1); gr.addColorStop(1, c0);
+        g.fillStyle = gr;
+      } else g.fillStyle = o.night ? TYPE.moon : TYPE.ink;
+      g.fillText(r.t, x, base); x += r.w;
+    });
+    const blur = mk(img.width, img.height), bg = blur.getContext('2d');
+    bg.filter = `blur(${Math.round(size * 0.12)}px)`; bg.drawImage(img, 0, 0);
+    const halo = mk(img.width, img.height), hg = halo.getContext('2d');
+    hg.filter = `blur(${Math.round(size * 0.35)}px)`; hg.drawImage(img, 0, 0);
+    hg.filter = 'none'; hg.globalCompositeOperation = 'source-in'; hg.fillStyle = o.night ? TYPE.nightGlow : TYPE.paperGlow; hg.fillRect(0, 0, img.width, img.height);
+    const L = { img, blur, halo, w, pad, base, size };
+    LINE_CACHE.set(key, L); return L;
+  }
+  // draw one set line, revealed to p (0..1): a sharp body, an ink bloom at the leading edge
+  function inkLine(c, L, x, yBase, p, alpha = 1, halo = true) {
+    if (p <= 0 || alpha <= 0) return;
+    const iw = L.img.width, ih = L.img.height;
+    const edge = Math.max(90, L.size * 1.6);
+    const pos = lerp(L.pad - edge * 0.2, L.pad + L.w + edge, p);  // leading edge in line pixels
+    const dx = x - L.pad, dy = yBase - L.base + (1 - easeOut(clamp(p * 1.4))) * L.size * 0.08;
+    const stop = (v) => clamp(v / iw);
+    const mask = (img, a0, a1, a2) => {
+      sg.globalCompositeOperation = 'source-over'; sg.clearRect(0, 0, iw, ih); sg.drawImage(img, 0, 0);
+      sg.globalCompositeOperation = 'destination-in';
+      const gr = sg.createLinearGradient(0, 0, iw, 0);
+      a0.forEach(([v, a]) => gr.addColorStop(stop(v), `rgba(0,0,0,${a})`));
+      sg.fillStyle = gr; sg.fillRect(0, 0, iw, ih);
+      sg.globalCompositeOperation = 'source-over';
+    };
+    if (halo) { // a quiet glow of paper behind the letters, for legibility on any ground
+      mask(L.halo, [[0, 1], [pos - edge * 0.2, 1], [pos + 1, 0]]);
+      c.globalAlpha = alpha * 0.9; c.drawImage(scratch, 0, 0, iw, ih, dx, dy, iw, ih);
+    }
+    mask(L.img, [[0, 1], [Math.max(0, pos - edge), 1], [pos, 0]]);
+    c.globalAlpha = alpha; c.drawImage(scratch, 0, 0, iw, ih, dx, dy, iw, ih);
+    if (p < 1) {
+      mask(L.blur, [[Math.max(0, pos - edge * 1.4), 0], [Math.max(0, pos - edge * 0.45), 0.9], [pos + edge * 0.15, 0]]);
+      c.globalAlpha = alpha * 0.85; c.drawImage(scratch, 0, 0, iw, ih, dx, dy, iw, ih);
+    }
+    c.globalAlpha = 1;
+  }
+  // a block of hand-broken lines: each unfolds in turn, the block holds, then lifts away
+  function passage(c, lt, b) {
+    const size = b.size || 84, lh = size * (b.lh || 1.2);
+    let t = b.at;
+    const times = b.lines.map((ln) => {
+      const plain = ln.replace(/[{}*]/g, '');
+      const dur = clamp(plain.length * (b.pace || 0.034), 0.75, 2.1);
+      const at = t; t += dur * 0.72 + (/[,—:;]$/.test(plain) ? 0.35 : 0.55) + (b.gap || 0);
+      return [at, dur];
+    });
+    const outT = b.out ?? Infinity;
+    const exit = seg(lt, outT, outT + 0.9);
+    if (exit >= 1 || lt < b.at) return;
+    const h = b.lines.length * lh;
+    const y0 = (b.valign === 'middle' ? b.y - h / 2 : b.y) + size * 0.95 - exit * 16;
+    b.lines.forEach((ln, i) => {
+      const L = setLine(ln, size, b);
+      const [at, dur] = times[i];
+      const p = ease(seg(lt, at, at + dur));
+      const x = b.align === 'center' ? b.x - L.w / 2 : b.align === 'right' ? b.x - L.w : b.x;
+      inkLine(c, L, x, y0 + i * lh, p, (b.alpha ?? 1) * (1 - ease(exit)), b.halo !== false);
+    });
+  }
+  // when a passage will have fully arrived (for timing the next one)
+  function arrives(b) {
+    let t = b.at, end = b.at;
+    b.lines.forEach((ln) => {
+      const plain = ln.replace(/[{}*]/g, ''), dur = clamp(plain.length * (b.pace || 0.034), 0.75, 2.1);
+      end = t + dur; t += dur * 0.72 + (/[,—:;]$/.test(plain) ? 0.35 : 0.55) + (b.gap || 0);
+    });
+    return end;
+  }
+  // a small label in capitals, for the one place the film names a source
+  function label(c, lt, at, text, x, y, o = {}) {
+    const k = ease(seg(lt, at, at + 1.2)) * (1 - ease(seg(lt, o.out ?? 1e9, (o.out ?? 1e9) + 0.8)));
+    if (k <= 0) return;
+    c.font = '400 22px "Cinzel"'; c.letterSpacing = '7px'; c.textAlign = o.align || 'left'; c.textBaseline = 'middle';
+    c.fillStyle = o.night ? 'rgba(233,223,204,.7)' : 'rgba(80,56,40,.75)'; c.globalAlpha = k; c.fillText(text, x, y);
+    c.globalAlpha = 1; c.letterSpacing = '0px'; c.textAlign = 'left';
+  }
+
+  /* ============================================================ THE TYPE STUDY (a short cut) */
+  const CUT = new URLSearchParams(location.search).get('cut');
+  let GLASS_R, lineC;
+  if (CUT === 'type') {
+    S.length = 0;
+
+    // I · the morning
+    const m1 = { at: 1.4, x: 200, y: 250, size: 92, night: true, lines: ['There is a particular kind of morning', 'that belongs to {2026}', 'and no other year', 'in the history of the species.'] };
+    m1.out = arrives(m1) + 2.4;
+    const m2 = { at: m1.out + 1.1, x: 200, y: 330, size: 92, night: true, lines: ['You speak a few sentences', '*into the dark —*'] };
+    m2.out = arrives(m2) + 2.2;
+    scene(m2.out + 1.6, (c, t) => {
+      paper(c, 'dark'); stars(c, t, 160, 3, 0.7);
+      const gx = 1560, gy = 860;
+      c.save(); c.globalCompositeOperation = 'screen';
+      const gl = c.createRadialGradient(gx, gy, 0, gx, gy, 520);
+      gl.addColorStop(0, 'rgba(160,182,228,.5)'); gl.addColorStop(0.35, 'rgba(80,100,150,.14)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = gl; c.fillRect(0, 0, W, H); c.restore();
+      c.fillStyle = 'rgba(214,226,248,.92)'; c.fillRect(gx - 30, gy - 52, 60, 104);
+      // the spoken words leave the screen as letters
+      const letters = 'ascripttenpageanalysisadraftofsomethingyouhavebeenmeaningtowrite', r = rng(31);
+      c.font = 'italic 34px "Cormorant Garamond"'; c.textBaseline = 'middle';
+      for (let i = 0; i < 120; i++) {
+        const born = m2.at + 0.6 + r() * 5.5, life = 3.4 + r() * 2, dx = (r() - 0.6) * 700, sway = r() * TAU;
+        const k = (t - born) / life; if (k < 0 || k > 1) { r(); continue; }
+        c.globalAlpha = Math.sin(k * PI) * 0.7; c.fillStyle = MOON;
+        c.fillText(letters[i % letters.length], gx + dx * easeOut(k) + Math.sin(t * 1.3 + sway) * 18, gy - 80 - k * 640); r();
+      }
+      c.globalAlpha = 1;
+    }, { text: (c, t) => { passage(c, t, m1); passage(c, t, m2); } });
+
+    // II · the line
+    const l1 = { at: 1.2, x: CX, y: 120, size: 80, align: 'center', lines: ['not merely present,', 'but standing in a line'] };
+    l1.out = arrives(l1) + 2.0;
+    const l2 = { at: l1.out + 0.9, x: CX, y: 120, size: 80, align: 'center', lines: ['that stretches past the castle walls', 'and over the horizon,'] };
+    l2.out = arrives(l2) + 2.2;
+    const l3 = { at: l2.out + 0.9, x: CX, y: 120, size: 80, align: 'center', lines: ['waiting for instructions', 'you do not have {time to give.}'] };
+    l3.out = arrives(l3) + 3.0;
+    scene(l3.out + 1.4, (c, t, d) => {
+      paper(c, 'day');
+      const p = seg(t, 0.3, d - 1.2), z = ease(seg(p, 0.04, 0.95));
+      const visible = p < 0.08 ? 1 : Math.exp(lerp(0, Math.log(lineC.o.count), Math.pow(easeOut(seg(p, 0.08, 0.92)), 1.6)));
+      drawLine(c, lineC, { zoom: lerp(2.3, 1.05, z), focus: z, visible });
+      // a haze of paper across the sky, so the words never sit on the drawing
+      const hz = c.createLinearGradient(0, 0, 0, 380);
+      hz.addColorStop(0, 'rgba(246,240,229,.94)'); hz.addColorStop(0.6, 'rgba(246,240,229,.8)'); hz.addColorStop(1, 'rgba(246,240,229,0)');
+      c.fillStyle = hz; c.fillRect(0, 0, W, 380);
+    }, { text: (c, t) => { passage(c, t, l1); passage(c, t, l2); passage(c, t, l3); } });
+
+    // III · the glass
+    const g1 = { valign: 'middle', at: 1.0, x: 160, y: 560, size: 86, lines: ['a lifelong servant', 'has brought you apple juice', 'when you wanted orange —'] };
+    g1.out = arrives(g1) + 1.8;
+    const g2 = { valign: 'middle', at: g1.out + 0.9, x: 160, y: 560, size: 86, lines: ['is ninety percent', 'of the way there,'] };
+    g2.out = arrives(g2) + 1.6;
+    const g3 = { valign: 'middle', at: g2.out + 0.9, x: 160, y: 560, size: 86, lines: ['which is somehow', 'worse than fifty,', 'because it reveals', '{the shape of the gap.}'] };
+    g3.out = arrives(g3) + 3.4;
+    scene(g3.out + 1.4, (c, t) => {
+      paper(c, 'day');
+      G.cx = 1390;
+      GLASS_R.draw(c, ease(seg(t, 0.2, 1.8)), INK);
+      const BOT = 452, TOP = 186, lvl = (f) => lerp(BOT, TOP, f);
+      const aF = ease(seg(t, g1.at + 0.8, g1.at + 3.2)) - ease(seg(t, g1.out - 0.2, g1.out + 0.9));
+      const oF = 0.5 * ease(seg(t, g2.at, g2.at + 1.2)) + 0.4 * ease(seg(t, g2.at + 1.6, g2.at + 2.8));
+      const inside = gP([[214, 186], [232, 446], [300, 458], [368, 446], [386, 186]]);
+      const fill = (f, col, line) => {
+        if (f <= 0.001) return;
+        c.save(); c.beginPath(); inside.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.clip();
+        const y = gY(lvl(f));
+        c.fillStyle = col; c.fillRect(0, y, W, H);
+        c.strokeStyle = line; c.lineWidth = 1; c.globalAlpha = 0.7;
+        for (let yy = y + 3; yy < gY(460); yy += 5) { c.beginPath(); c.moveTo(gX(200), yy); c.lineTo(gX(400), yy); c.stroke(); }
+        c.globalAlpha = 1; c.lineWidth = 1.6; c.beginPath(); c.ellipse(G.cx, y, lerp(68, 86, f) * GS, 10 * GS, 0, 0, TAU); c.stroke();
+        c.restore();
+      };
+      fill(aF, 'rgba(226,214,140,.9)', '#8f8424');
+      fill(oF, 'rgba(240,164,92,.92)', '#b8521a');
+      const gtime = g3.at + 2.6, g = ease(seg(t, gtime, gtime + 1.4));
+      if (g > 0) {
+        c.save(); c.shadowColor = 'rgba(240,200,90,.9)'; c.shadowBlur = 18; c.strokeStyle = '#d9a73a'; c.lineWidth = 3.4; c.globalAlpha = g;
+        c.beginPath(); c.ellipse(G.cx, gY(214), 84 * GS, 11 * GS, 0, 0, TAU); c.stroke();
+        c.beginPath(); c.moveTo(gX(214), gY(186)); c.lineTo(gX(216), gY(214)); c.moveTo(gX(386), gY(186)); c.lineTo(gX(384), gY(214)); c.stroke();
+        c.restore();
+      }
+      G.cx = CX;
+    }, { text: (c, t) => { passage(c, t, g1); passage(c, t, g2); passage(c, t, g3); } });
+
+    // IV · the letter
+    const n1 = { at: 1.4, x: CX, y: 300, size: 64, align: 'center', night: true, alpha: 0.82, lines: ['Despite this, they pledge their undying loyalty', 'and eternal labor to your cause.'] };
+    n1.out = arrives(n1) + 1.6;
+    const n2 = { at: n1.out + 1.3, x: CX, y: CY, valign: 'middle', size: 150, align: 'center', night: true, pace: 0.07, gap: 0.5, lines: ['But you have', '{no cause.}'] };
+    n2.out = arrives(n2) + 3.6;
+    scene(n2.out + 1.4, (c, t) => { paper(c, 'night'); stars(c, t, 220, 7, 0.8); }, {
+      text: (c, t) => { label(c, t, 0.5, 'A LETTER, SENT LATE AT NIGHT', CX, 170, { align: 'center', night: true, out: n1.out }); passage(c, t, n1); passage(c, t, n2); },
+    });
+
+    // V · the crown
+    const k1 = { at: 5.6, x: 170, y: 250, size: 84, lines: ['The crown is on the floor.'] };
+    const k2 = { at: 8.4, x: 170, y: 250 + 84 * 1.25, size: 84, lines: ['It is heavy.'] };
+    const k3 = { at: 10.6, x: 170, y: 250 + 84 * 2.5, size: 84, lines: ['It was always going to be heavy.'] };
+    const k4 = { at: 14.6, x: 170, y: 250 + 84 * 4.1, size: 104, pace: 0.08, lines: ['{Pick it up.}'] };
+    [k1, k2, k3].forEach((k) => (k.out = 19.2)); k4.out = 21.5;
+    scene(23.2, (c, t) => {
+      paper(c, 'first');
+      c.save();
+      const s2 = 0.78, ox = 1330 - 700 * s2, oy = 205;
+      c.translate(ox, oy); c.scale(s2, s2);
+      c.strokeStyle = INK; for (let i = 0; i < 14; i++) { c.globalAlpha = 0.5 - i * 0.032; c.lineWidth = 1.3; const y = 1000 + Math.pow(i, 1.5) * 4.4; c.beginPath(); c.moveTo(-1400, y); c.lineTo(2400, y); c.stroke(); }
+      c.globalAlpha = 1;
+      c.drawImage(IMG.column, 340, 445, 720, 555);
+      // the crown tips off the LEFT edge, toward the words
+      const tip = ease(seg(t, 1.6, 2.7)), fall = seg(t, 2.7, 3.7), settle = seg(t, 3.7, 4.5);
+      let x = -22 * tip, y = -6 * tip, rot = -16 * tip;
+      if (fall > 0) { x = lerp(-22, -420, easeOut(fall)); y = lerp(-6, 290, fall * fall); rot = lerp(-16, -94, easeOut(fall)); }
+      if (settle > 0) { const b = Math.sin(settle * PI) * (1 - settle); x = -420 - 14 * easeOut(settle); y = 290 - 38 * b; rot = -94 + 4 * easeOut(settle) - 5 * b; }
+      const down = seg(t, 3.5, 4.5);
+      c.fillStyle = `rgba(58,34,24,${0.22 * down})`; c.beginPath(); c.ellipse(700 - 434 - 196, 1004, 210, 16, 0, 0, TAU); c.fill();
+      c.save(); c.translate(440 + 250 + x, 93 + 392 + y); c.rotate(rot * PI / 180);
+      c.globalAlpha = 0.75; c.drawImage(IMG.crown, -250, -392, 500, 392); c.globalAlpha = 1;
+      c.drawImage(GOLD_CROWN, -250, -392, 500, 392);
+      c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.5 + 0.3 * Math.sin(t * 1.3); c.drawImage(GOLD_CROWN, -250, -392, 500, 392);
+      c.restore(); c.restore();
+    }, { text: (c, t) => { [k1, k2, k3, k4].forEach((k) => passage(c, t, k)); } });
+  }
+
   /* ------------------------------------------------------------ timeline */
   const XF = 1.0;
   let acc = 0;
@@ -948,6 +1189,9 @@
       const drift = 1 + 0.035 * clamp(lt / s.d);
       c.translate(CX, CY); c.scale(drift, drift); c.translate(-CX, -CY);
       s.draw(c, lt, s.d);
+      // type is set on its own pass, outside the camera drift, so it never shimmers or scales
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.filter = 'none';
+      if (s.text) s.text(c, lt, s.d);
       const a = k === 0 ? 1 : ease(seg(T, s.t0, s.t0 + XF));
       out.globalAlpha = a; out.drawImage(buf, 0, 0);
     });
@@ -966,9 +1210,11 @@
 
   const ready = (async () => {
     await loaded;
-    await Promise.all(['italic 400 40px "Cormorant Garamond"', '400 40px "Cormorant Garamond"', '400 40px "Cinzel"'].map((f) => document.fonts.load(f)));
+    await Promise.all(['italic 400 40px "Cormorant Garamond"', '400 40px "Cormorant Garamond"', 'italic 500 40px "Cormorant Garamond"', '500 40px "Cormorant Garamond"', '400 40px "Cinzel"'].map((f) => document.fonts.load(f)));
     buildPaper(); buildGrain();
-    FACADE = buildFacade(); TABLET = buildTablet(); GLASS = buildGlass(); MIRROR = buildMirror(); WALL = buildWall();
+    FACADE = buildFacade(); TABLET = buildTablet(); GLASS = buildGlass();
+    G.cx = 1390; GLASS_R = buildGlass(); G.cx = CX;
+    lineC = new LineScene(document.getElementById('line-c'), { horizon: 0.6, z0: 12 }); MIRROR = buildMirror(); WALL = buildWall();
     GOLD_CROWN = goldCrown();
     lineA = new LineScene(document.getElementById('line-a'));
     lineB = new LineScene(document.getElementById('line-b'), { gate: false, count: 3200, firstX: -3.5, z0: 9 });
@@ -981,11 +1227,12 @@
   const cues = () => ({
     duration: DURATION,
     scenes: S.map((s) => +s.t0.toFixed(2)),
-    crownLand: +(S[S.length - 2].t0 + 4.5).toFixed(2),
-    title: +(S[2].t0 + 1).toFixed(2),
-    night: +(S[19].t0 + 2).toFixed(2),
-    firstLight: +S[S.length - 2].t0.toFixed(2),
-    pick: +(S[S.length - 2].t0 + 16).toFixed(2),
+    cut: CUT || 'full',
+    crownLand: CUT === 'type' ? +(S[4].t0 + 3.7).toFixed(2) : +(S[S.length - 2].t0 + 4.5).toFixed(2),
+    title: S[2] ? +(S[2].t0 + 1).toFixed(2) : 0,
+    night: CUT === 'type' ? +S[3].t0.toFixed(2) : +(S[19].t0 + 2).toFixed(2),
+    firstLight: CUT === 'type' ? +S[4].t0.toFixed(2) : +S[S.length - 2].t0.toFixed(2),
+    pick: CUT === 'type' ? +(S[4].t0 + 14.6).toFixed(2) : +(S[S.length - 2].t0 + 16).toFixed(2),
   });
 
   window.FILM = { ready, render, duration: () => DURATION, cues };

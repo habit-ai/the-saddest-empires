@@ -30,7 +30,19 @@ visual essay. The film is a separate, purpose-built piece:
 - Render: `tools/record-film.js` (frames) → `tools/score.py` (audio) → ffmpeg:
   `ffmpeg -framerate 30 -i frames/f%05d.jpg -i score.wav -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest out.mp4`
 
-**Text correction:** the hosted essay is a reworked version of the vault draft. It has a new "mirror / the failure is the king"
+### Type study (2026-09-25)
+
+Samuel: the text is the most important element, and it has to be far more legible and beautiful. `film.html?cut=type`
+is an 86-second study of five moments built around a typesetting engine in `film.js`:
+
+- The type is **set, not captioned**. Cormorant Garamond 500 at 78–150 px, with lines broken by hand for rhythm.
+  Text never sits over the busy part of an image: the image is composed around a text zone.
+- **Ink reveal**: each line runs left to right with a soft leading edge that blooms and then sharpens. Lines settle a few pixels
+  as they land, and each block holds for reading time, then lifts away.
+- `{gold}` marks the emphasis (*2026*, *time to give*, *the shape of the gap*, *no cause*, *Pick it up*); `*italic*` marks stress.
+- The type is drawn on its own pass outside the camera drift, so it never scales or shimmers. A paper (or night) glow sits behind the letters.
+- If this direction holds, the full film is re-set with this engine.
+ the hosted essay is a reworked version of the vault draft. It has a new "mirror / the failure is the king"
 passage, and it drops the Tuesday line, the Force Quit dialog, "Everyone is a king" and the Marcus/Simon extended beats.
 The storyboard below was written from the vault draft. Rows 10, 14, 18, 20, 24–25 and 32 have no text to hang on in the
 hosted version and need re-cutting before Phase 3. New beats to add from the hosted text: *the mirror is accurate, the face is bland*

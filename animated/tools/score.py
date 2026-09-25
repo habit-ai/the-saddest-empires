@@ -71,6 +71,7 @@ def thud(start, gain=0.5):
 
 sc = cues["scenes"]
 night, first = cues["night"], cues["firstLight"]
+SHORT = cues.get("cut") == "type"
 
 # the harmony follows the essay's day: morning, argument, dusk, night, first light
 plan = [
@@ -80,6 +81,9 @@ plan = [
     (111.5, ["G2", "D3", "Bb3"]), (119, ["Eb3", "Bb3", "G4"]), (126, ["Bb2", "F3", "D4"]), (136.5, ["F2", "C3", "A3"]),
     (145.5, ["G2", "D3", "Bb3", "D4"]), (158, ["Eb3", "G3", "Bb3"]), (164.5, ["C3", "G3", "Eb4"]),
 ]
+if SHORT:  # the type study: one chord family per scene, night and first light as in the film
+    plan = [(sc[0], ["D3", "A3", "F4"]), (sc[0] + 7, ["Bb2", "F3", "D4"]), (sc[1], ["F2", "C3", "A3", "F4"]),
+            (sc[1] + 9, ["C3", "G3", "E4"]), (sc[2], ["G2", "D3", "Bb3", "F4"]), (sc[2] + 9, ["A2", "E3", "C#4"])]
 for i, (start, notes) in enumerate(plan):
     end = plan[i + 1][0] if i + 1 < len(plan) else night
     pad(notes, start, end - start + 1.5, gain=0.05)

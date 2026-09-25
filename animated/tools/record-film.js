@@ -10,7 +10,7 @@ const FPS = 30, OUT = process.env.OUT;
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   // The type must be the real type: reload until both faces are in (Google Fonts can fail transiently).
   for (let attempt = 1; ; attempt++) {
-    await p.goto('http://localhost:8765/animated/film.html?record');
+    await p.goto('http://localhost:8765/animated/film.html?record' + (process.env.Q || ''));
     await p.evaluate(() => window.FILM.ready);
     const ok = await p.evaluate(() => document.fonts.check('italic 40px "Cormorant Garamond"') && document.fonts.check('40px "Cinzel"')
       && [...document.fonts].some((f) => f.family.includes('Cormorant') && f.status === 'loaded'));
