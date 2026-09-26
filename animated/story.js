@@ -263,6 +263,173 @@ window.defineStory = function (L) {
     c.restore(); c.restore();
   };
 
+  const MIPS = [IMG.s1, IMG.s2, IMG.s3, IMG.s4, IMG.s5, IMG.s6].map((img) => [16, 32, 64, 128, 256, 480].map((h) => {
+    const w = Math.max(1, Math.round((img.width / img.height) * h)), cv = mk(w, h), g = cv.getContext('2d');
+    g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, h); return cv;
+  }));
+  const spriteAt = (i, px) => { for (const cv of MIPS[i]) if (cv.height >= px) return cv; return MIPS[i][MIPS[i].length - 1]; };
+  const CROWD = (() => {
+    const r = rng(21), a = [];
+    for (let k = 0; k < 54; k++) {
+      const z = 5.2 * Math.pow(1.085, k), far = z > 60, nj = far ? 70 : 7, sp = far ? 1.25 : 1.08;
+      if (z < 16 && k % 2) continue;                          // an orderly court: fewer, clearer rows up close
+      for (let j = 0; j < nj; j++) for (const sgn of [-1, 1]) {
+        const x = sgn * (1.5 + j * sp + (r() - 0.5) * 0.25);
+        if (!far && Math.abs(x) > 8.2) continue;
+        a.push({ z: z * (1 + (r() - 0.5) * 0.03), x, s: Math.floor(r() * 6), flip: r() < 0.5, h: 1.75 * (0.92 + r() * 0.14), k });
+      }
+    }
+    return a.sort((p2, q) => q.z - p2.z);
+  })();
+  function armrest(c, side) {
+    // a carved, gilded arm of the throne, rising into the frame from a bottom corner
+    c.save(); if (side > 0) { c.translate(W, 0); c.scale(-1, 1); }
+    const body = [[-40, 1120], [-40, 930], [120, 880], [300, 858], [360, 862]];
+    const top = [[360, 862], [420, 870], [452, 905], [440, 950], [398, 968], [360, 950], [350, 915], [380, 900]];
+    c.beginPath(); c.moveTo(-40, 1120);
+    [...body.slice(1), ...top].forEach(([x, y]) => c.lineTo(x, y));
+    c.lineTo(330, 1000); c.lineTo(220, 1040); c.lineTo(120, 1120); c.closePath();
+    const g = c.createLinearGradient(0, 860, 0, 1100);
+    g.addColorStop(0, '#e2b75a'); g.addColorStop(0.35, '#9c6e1c'); g.addColorStop(1, '#4a3008');
+    c.fillStyle = g; c.fill();
+    c.strokeStyle = 'rgba(40,22,6,.9)'; c.lineWidth = 2.2; c.stroke();
+    c.save(); c.clip();
+    c.strokeStyle = 'rgba(60,34,8,.45)'; c.lineWidth = 1;
+    for (let x = -60; x < 480; x += 7) { c.beginPath(); c.moveTo(x, 960); c.lineTo(x + 70, 1120); c.stroke(); }
+    c.restore();
+    c.strokeStyle = 'rgba(40,22,6,.85)'; c.lineWidth = 1.5;
+    c.beginPath(); ellipsePts(410, 918, 30, 30, 0, TAU * 1.6, 60).forEach(([x, y], i) => { const k = 1 - i / 60 * 0.6; const px = 410 + (x - 410) * k, py = 918 + (y - 918) * k; i ? c.lineTo(px, py) : c.moveTo(px, py); }); c.stroke();
+    c.beginPath(); c.moveTo(0, 915); c.quadraticCurveTo(180, 880, 350, 885); c.stroke();
+    c.restore();
+  }
+  WORLD.throne = (c, t, o = {}) => {
+    L.paper(c, 'day');
+    const VX = 960, VY = 470, f = 900, camH = 3.2;
+    const X = (x, z) => VX + (f * x) / z, Y = (y, z) => VY + (f * (camH - y)) / z;
+    const dr = o.drift ? 1 + 0.045 * ease(clamp(t / o.drift)) : 1;
+    c.save(); c.translate(VX, VY); c.scale(dr, dr); c.translate(-VX, -VY);
+    // light through the great doors
+    c.save(); c.globalCompositeOperation = 'screen';
+    const gl = c.createRadialGradient(VX, VY - 30, 0, VX, VY - 30, 820);
+    gl.addColorStop(0, 'rgba(255,226,170,.55)'); gl.addColorStop(1, 'rgba(255,200,120,0)');
+    c.fillStyle = gl; c.fillRect(0, 0, W, H); c.restore();
+    // floor
+    c.strokeStyle = 'rgba(43,26,18,.26)'; c.lineWidth = 1;
+    for (let x = -10.8; x <= 10.8; x += 1.2) { c.beginPath(); c.moveTo(X(x, 3), Y(0, 3)); c.lineTo(X(x, 60), Y(0, 60)); c.stroke(); }
+    for (let z = 3; z < 60; z *= 1.1) { c.beginPath(); c.moveTo(X(-11, z), Y(0, z)); c.lineTo(X(11, z), Y(0, z)); c.stroke(); }
+    c.strokeStyle = 'rgba(43,26,18,.45)'; c.beginPath(); c.moveTo(0, VY); c.lineTo(W, VY); c.stroke();
+    // the carpet runs from the dais down the aisle to the doors
+    const cz = (z) => [[X(-0.8, z), Y(0, z)], [X(0.8, z), Y(0, z)]];
+    const [a0, b0] = cz(3.4), [a1, b1] = cz(60);
+    c.save(); c.beginPath(); c.moveTo(a0[0], 930); c.lineTo(b0[0], 930); c.lineTo(b1[0], b1[1]); c.lineTo(a1[0], a1[1]); c.closePath(); c.clip();
+    const cg = c.createLinearGradient(0, VY, 0, 930); cg.addColorStop(0, 'rgb(112,44,36)'); cg.addColorStop(1, 'rgb(132,40,32)');
+    c.fillStyle = cg; c.fillRect(0, VY, W, 930 - VY);
+    c.strokeStyle = 'rgba(40,10,8,.35)'; c.lineWidth = 1; for (let z = 3.4; z < 60; z *= 1.06) { c.beginPath(); c.moveTo(X(-2, z), Y(0, z)); c.lineTo(X(2, z), Y(0, z)); c.stroke(); }
+    c.restore();
+    c.strokeStyle = '#c99a3e'; c.lineWidth = 2; c.beginPath(); c.moveTo(a0[0] + 6, 930); c.lineTo(a1[0], a1[1]); c.moveTo(b0[0] - 6, 930); c.lineTo(b1[0], b1[1]); c.stroke();
+
+    const crowd = (pred) => {
+      for (const p2 of CROWD) {
+        if (!pred(p2.z)) continue;
+        const hp = (f * p2.h) / p2.z, x = X(p2.x, p2.z), yf = Y(0, p2.z);
+        const haze = 1 - Math.min(0.65, p2.z / 380);
+        if (hp < 3) { c.globalAlpha = haze * (hp < 1.2 ? 0.1 : 0.35); c.fillStyle = INK; c.fillRect(x, yf - hp, 1, Math.max(1, hp)); continue; }
+        let bow = 0;
+        if (o.bowAt !== undefined) {
+          const u = t - o.bowAt - p2.k * 0.045;
+          bow = u < 0 ? 0 : u < 0.7 ? ease(u / 0.7) : u < 2.4 ? 1 : 1 - ease(clamp((u - 2.4) / 1.0));
+        }
+        const img = spriteAt(p2.s, hp), w = (img.width / img.height) * hp;
+        c.globalAlpha = haze;
+        c.save(); c.translate(x, yf); c.rotate(bow * 0.42 * (p2.x < 0 ? 1 : -1)); c.scale(1, 1 - 0.16 * bow); if (p2.flip) c.scale(-1, 1);
+        c.drawImage(img, -w / 2, -hp, w, hp); c.restore();
+      }
+      c.globalAlpha = 1;
+    };
+    crowd((z) => z > 60);
+    // side walls and the back wall with its great doorway
+    const wallFill = 'rgba(244,238,226,1)';
+    for (const sgn of [-1, 1]) {
+      const poly = [[X(sgn * 11, 5), Y(0, 5)], [X(sgn * 11, 60), Y(0, 60)], [X(sgn * 11, 60), Y(16, 60)], [X(sgn * 11, 5), Y(16, 5)]];
+      c.fillStyle = wallFill; c.beginPath(); poly.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
+      new Etch().addAll(hatch(poly, 90, 7, 0, 5), 0.6, 0.3).draw(c);
+    }
+    const back = (x0, x1, y0, y1) => { const poly = [[X(x0, 60), Y(y0, 60)], [X(x1, 60), Y(y0, 60)], [X(x1, 60), Y(y1, 60)], [X(x0, 60), Y(y1, 60)]]; c.fillStyle = wallFill; c.beginPath(); poly.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill(); new Etch().addAll(hatch(poly, 0, 3.2, 0, 7), 0.6, 0.35).draw(c); return poly; };
+    back(-11, -5, 0, 16); back(5, 11, 0, 16); back(-5, 5, 10, 16);
+    c.strokeStyle = 'rgba(43,26,18,.7)'; c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(X(-5, 60), Y(0, 60)); c.lineTo(X(-5, 60), Y(10, 60)); c.lineTo(X(5, 60), Y(10, 60)); c.lineTo(X(5, 60), Y(0, 60)); c.stroke();
+    crowd((z) => z <= 60);
+    // columns, rising out of the frame
+    for (const zc of [9, 12.5, 17, 23, 31, 42, 56]) for (const sgn of [-1, 1]) {
+      const xc = sgn * 9.4, w = 0.55;
+      const x0 = X(xc - w, zc), x1 = X(xc + w, zc), yb = Y(0, zc), yt = Y(16, zc);
+      c.fillStyle = wallFill; c.fillRect(x0, yt, x1 - x0, yb - yt);
+      c.strokeStyle = 'rgba(43,26,18,.8)'; c.lineWidth = 1.2; c.strokeRect(x0, yt, x1 - x0, yb - yt);
+      c.strokeStyle = 'rgba(43,26,18,.35)'; c.lineWidth = 0.8;
+      const n = Math.max(3, Math.round((x1 - x0) / 5));
+      for (let q = 1; q < n; q++) { const xx = x0 + ((x1 - x0) * q) / n; if (sgn * (q / n - 0.5) > -0.1) { c.beginPath(); c.moveTo(xx, yt); c.lineTo(xx, yb); c.stroke(); } }
+      c.fillStyle = 'rgba(43,26,18,.5)'; c.fillRect(x0 - (x1 - x0) * 0.15, yb - (x1 - x0) * 0.3, (x1 - x0) * 1.3, (x1 - x0) * 0.3);
+    }
+    c.restore();
+    // warm the whole hall, and darken its edges
+    c.save(); c.globalCompositeOperation = 'multiply';
+    const vg = c.createRadialGradient(VX, VY, 250, VX, VY + 100, 1250);
+    vg.addColorStop(0, 'rgb(255,246,228)'); vg.addColorStop(0.7, 'rgb(226,200,160)'); vg.addColorStop(1, 'rgb(120,88,58)');
+    c.fillStyle = vg; c.fillRect(0, 0, W, H); c.restore();
+    // the top step of the dais: you are sitting above your court
+    const steps = [[930, 22], [972, 20], [1012, 70]];
+    steps.forEach(([y, h], i) => {
+      c.fillStyle = ['#e9dfcc', '#ddd0b8', '#d2c3a8'][i]; c.fillRect(0, y, W, h);
+      c.strokeStyle = 'rgba(43,26,18,.85)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+      c.strokeStyle = 'rgba(43,26,18,.3)'; c.lineWidth = 0.8;
+      for (let x = (i % 2) * 70; x < W; x += 140) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + h); c.stroke(); }
+    });
+    c.fillStyle = '#b8841c'; c.fillRect(0, 928, W, 3);
+  };
+  WORLD.bed = (c, t, o = {}) => {
+    L.paper(c, 'dark');
+    const ln = 'rgba(160,168,200,.55)', ln2 = 'rgba(160,168,200,.28)';
+    const px = 1180, py = 690;
+    c.save(); c.globalCompositeOperation = 'screen';
+    const gl = c.createRadialGradient(px, py - 40, 0, px, py - 40, 760);
+    gl.addColorStop(0, 'rgba(170,190,235,.5)'); gl.addColorStop(0.35, 'rgba(80,100,150,.14)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = gl; c.fillRect(0, 0, W, H); c.restore();
+    const e = new Etch();
+    e.add([[1800, 900], [1800, 470], [1830, 450], [1860, 470], [1860, 900]], 1.4);             // headboard
+    e.add([[1800, 520], [1860, 520]], 1); e.add([[1800, 560], [1860, 560]], 0.8);
+    e.add([[860, 900], [860, 640], [880, 626], [900, 640], [900, 900]], 1.4);                 // footboard
+    e.add([[900, 780], [1800, 780]], 1.2); e.add([[900, 900], [1800, 900]], 1.4);            // the bed's side
+    const blanket = []; for (let x = 900; x <= 1600; x += 10) blanket.push([x, 700 + Math.sin(x * 0.012) * 18 + Math.sin(x * 0.041) * 7]);
+    e.add(blanket, 1.3);
+    e.add([[1600, 705], [1640, 740], [1660, 790]], 1.1);
+    e.add(ellipsePts(1690, 660, 105, 42), 1.2);                                                 // pillow
+    e.addAll(hatch([[900, 715], [1600, 715], [1650, 780], [900, 780]], 28, 9, 3, 2), 0.7, 0.5);
+    e.addAll(hatch([[900, 782], [1800, 782], [1800, 898], [900, 898]], 0, 6, 0, 3), 0.6, 0.35);
+    e.draw(c, 1, ln);
+    // the phone, face up on the blanket
+    c.save(); c.translate(px, py); c.rotate(-0.12);
+    c.fillStyle = 'rgba(226,234,252,.95)'; c.fillRect(-34, -58, 68, 116); c.strokeStyle = 'rgba(20,20,30,.9)'; c.lineWidth = 2; c.strokeRect(-37, -61, 74, 122);
+    c.fillStyle = 'rgba(110,122,160,.55)'; for (let l = 0; l < 6; l++) c.fillRect(-24, -40 + l * 14, 30 + ((l * 23) % 18), 4);
+    c.restore();
+    // the spoken sentence rises as letters, and becomes a palace
+    if (o.lettersAt !== undefined) {
+      const letters = 'ascripttenpageanalysisadraftofsomethingyouhavebeenmeaningtowriteformonths', r = rng(31);
+      c.font = 'italic 38px "IM Fell English"';
+      for (let i = 0; i < 170; i++) {
+        const born = o.lettersAt + r() * 14, life = 3.4 + r() * 2.2, dx = (r() - 0.4) * 700, sway = r() * TAU;
+        const q = (t - born) / life; if (q < 0 || q > 1) { r(); continue; }
+        c.globalAlpha = Math.sin(q * PI) * 0.8; c.fillStyle = '#e9eefa';
+        c.fillText(letters[i % letters.length], px + dx * easeOut(q) + Math.sin(t * 1.3 + sway) * 16, py - 90 - q * 420); r();
+      }
+      c.globalAlpha = 1;
+    }
+    if (o.buildAt !== undefined && t > o.buildAt) {
+      c.save(); c.translate(1320, 250); c.scale(0.5, 0.5); c.translate(-W / 2, -540);
+      L.FACADE.draw(c, ease(seg(t, o.buildAt, o.buildAt + 9)), 'rgba(228,232,246,.85)');
+      c.restore();
+    }
+  };
+
   /* ============================================================ the book */
   const PAGE = { top: 78, bottom: 1002, lx: 116, rx: 1804 }, SPINE = W / 2;
   const PLATE = { x: 1022, y: 318, w: 720, h: 405 };          // 16:9, so the camera can travel into it exactly
@@ -305,7 +472,18 @@ window.defineStory = function (L) {
   }
   const paperLeaf = (() => { let p; return () => { if (!p) { p = mk(PAGE.rx - SPINE, PAGE.bottom - PAGE.top); p.getContext('2d').drawImage(PAPER.day, 300, 60, p.width, p.height, 0, 0, p.width, p.height); } return p; }; })();
   const endpaper = (() => { let p; return () => { if (!p) { p = mk(PAGE.rx - SPINE + 22, PAGE.bottom - PAGE.top + 34); const g = p.getContext('2d'); g.fillStyle = '#6b4a2e'; g.fillRect(0, 0, p.width, p.height); g.globalAlpha = 0.5; g.globalCompositeOperation = 'overlay'; g.drawImage(PAPER.day, 0, 0); } return p; }; })();
+  const printedLeaf = (() => { let p; return () => {
+    if (!p) {
+      p = mk(PAGE.rx - SPINE, PAGE.bottom - PAGE.top); const g = p.getContext('2d');
+      g.drawImage(PAPER.day, 500, 40, p.width, p.height, 0, 0, p.width, p.height);
+      const r = rng(8); g.fillStyle = 'rgba(40,26,16,.42)';
+      for (let y = 170; y < p.height - 110; y += 36) { const w = 520 + r() * 100 * (y % 7 ? 1 : 0); if (r() < 0.08) continue; g.fillRect(110, y, Math.min(w, p.width - 220), 5); }
+      const sh = g.createLinearGradient(0, 0, 120, 0); sh.addColorStop(0, 'rgba(40,26,12,.35)'); sh.addColorStop(1, 'rgba(40,26,12,0)'); g.fillStyle = sh; g.fillRect(0, 0, 120, p.height);
+    }
+    return p; }; })();
   const sceneCanvas = mk(), scx = sceneCanvas.getContext('2d');
+  const plateTmp = mk(720, 405), pt = plateTmp.getContext('2d');
+  const plateGrain = (() => { const r = rng(4), a = new Float32Array(720 * 405); for (let i = 0; i < a.length; i++) { const x = i % 720, y = (i / 720) | 0; a[i] = 0.7 * r() + 0.3 * ((x + y * 0.6) / 1000); } return a; })();
   function book(c, t, o) {
     // camera: s scales the world about (cx, cy) placed at screen centre
     const cam = o.cam || { s: 1, cx: CX, cy: CY };
@@ -328,16 +506,65 @@ window.defineStory = function (L) {
         c.strokeStyle = `rgba(40,24,14,${0.8 * pa})`; c.lineWidth = 1.6; c.strokeRect(PLATE.x - 14, PLATE.y - 14, PLATE.w + 28, PLATE.h + 28);
         c.lineWidth = 0.8; c.strokeRect(PLATE.x - 6, PLATE.y - 6, PLATE.w + 12, PLATE.h + 12);
         o.plate(scx, t);
-        c.globalAlpha = pa; c.drawImage(sceneCanvas, PLATE.x, PLATE.y, PLATE.w, PLATE.h); c.globalAlpha = 1;
+        if (o.plateAppear !== undefined && o.plateAppear < 1) {
+          // the plate engraves itself: grains of the picture arrive out of the paper
+          pt.clearRect(0, 0, PLATE.w, PLATE.h); pt.drawImage(sceneCanvas, 0, 0, PLATE.w, PLATE.h);
+          const img = pt.getImageData(0, 0, PLATE.w, PLATE.h), dd = img.data, ap = o.plateAppear * 1.18;
+          for (let i = 0, j = 3; i < plateGrain.length; i++, j += 4) dd[j] = 255 * clamp((ap - plateGrain[i]) / 0.16);
+          pt.putImageData(img, 0, 0);
+          c.globalAlpha = pa; c.drawImage(plateTmp, PLATE.x, PLATE.y); c.globalAlpha = 1;
+        } else { c.globalAlpha = pa; c.drawImage(sceneCanvas, PLATE.x, PLATE.y, PLATE.w, PLATE.h); c.globalAlpha = 1; }
         c.font = 'italic 400 24px "IM Fell English"'; c.textAlign = 'center'; c.fillStyle = `rgba(45,28,18,${0.7 * pa})`;
         c.fillText(o.plateCaption || '', PLATE.x + PLATE.w / 2, PLATE.y + PLATE.h + 56); c.textAlign = 'left';
       }
       if (o.leftPage) o.leftPage(c, t);
       if (o.turn !== undefined) leaf(c, 1 - 2 * o.turn, o.turnFront || paperLeaf(), paperLeaf());   // a page turning right to left
+      if (o.riffle) o.riffle.forEach((u) => { if (u > 0 && u < 1) leaf(c, 1 - 2 * u, printedLeaf(), printedLeaf()); });
     }
     // the cover, closed on the right or swung open to the left
     if (open < 1) { if (open === 0) { c.fillStyle = '#281409'; c.fillRect(SPINE - 30, PAGE.top - 16, 30, PAGE.bottom - PAGE.top + 34); } leaf(c, 1 - 2 * open, cover, endpaper()); }
+    if (open === 0 && o.sheen > 0 && o.sheen < 1) {             // the candle finds the gilt
+      c.save(); c.beginPath(); c.rect(SPINE, PAGE.top - 16, PAGE.rx - SPINE + 22, PAGE.bottom - PAGE.top + 34); c.clip();
+      c.globalCompositeOperation = 'screen';
+      const bx = lerp(SPINE - 300, PAGE.rx + 300, ease(o.sheen));
+      const sg2 = c.createLinearGradient(bx - 220, 0, bx + 220, 300);
+      sg2.addColorStop(0, 'rgba(255,220,140,0)'); sg2.addColorStop(0.5, 'rgba(255,220,140,.32)'); sg2.addColorStop(1, 'rgba(255,220,140,0)');
+      c.fillStyle = sg2; c.fillRect(SPINE, 0, PAGE.rx, H); c.restore();
+    }
+    if (o.glow > 0) {                                            // light spills from between the pages
+      c.save(); c.globalCompositeOperation = 'screen';
+      const gg = c.createRadialGradient(SPINE, 520, 0, SPINE, 520, 900);
+      gg.addColorStop(0, `rgba(255,214,140,${0.75 * o.glow})`); gg.addColorStop(0.35, `rgba(255,180,90,${0.28 * o.glow})`); gg.addColorStop(1, 'rgba(255,160,60,0)');
+      c.fillStyle = gg; c.fillRect(SPINE - 1000, -400, 2000, 1900);
+      for (let r = 0; r < 14; r++) {
+        const a = -PI / 2 + (r - 6.5) * 0.19 + Math.sin(t * 0.7 + r) * 0.02, len = 1100;
+        c.fillStyle = `rgba(255,220,150,${0.07 * o.glow})`;
+        c.beginPath(); c.moveTo(SPINE, 560); c.lineTo(SPINE + Math.cos(a - 0.03) * len, 560 + Math.sin(a - 0.03) * len); c.lineTo(SPINE + Math.cos(a + 0.03) * len, 560 + Math.sin(a + 0.03) * len); c.closePath(); c.fill();
+      }
+      c.restore();
+    }
+    let flame = null;
+    if (o.candle) { const C = o.candle; flame = [CX + (C.x - cam.cx) * cam.s, CY + (C.y - C.h * 1.08 - cam.cy) * cam.s]; }
     c.restore();
+    if (o.light) {
+      // a single candle is the only light: it reveals the desk as it catches
+      c.save(); c.globalCompositeOperation = 'multiply';
+      const fl = 1 + 0.02 * Math.sin(t * 7) + 0.012 * Math.sin(t * 13), R = lerp(40, 1650, o.light.r) * fl;
+      const g = c.createRadialGradient(flame[0], flame[1], 10, flame[0], flame[1], R);
+      g.addColorStop(0, 'rgb(255,242,218)'); g.addColorStop(0.5, 'rgb(214,172,126)'); g.addColorStop(0.85, 'rgb(70,46,28)'); g.addColorStop(1, 'rgb(0,0,0)');
+      c.globalAlpha = o.lightFade ?? 1; c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
+      if (o.candle.lit > 0) {
+        c.save(); c.translate(CX + (o.candle.x - cam.cx) * cam.s, CY + (o.candle.y - cam.cy) * cam.s); c.scale(cam.s, cam.s);
+        candle(c, 0, 0, o.candle.h, t, o.candle.lit); c.restore();
+        if (o.candle.spark > 0) {                                // the match
+          c.save(); c.globalCompositeOperation = 'screen';
+          const sp = c.createRadialGradient(flame[0], flame[1], 0, flame[0], flame[1], 160);
+          sp.addColorStop(0, `rgba(255,236,190,${o.candle.spark})`); sp.addColorStop(1, 'rgba(255,200,120,0)');
+          c.fillStyle = sp; c.fillRect(0, 0, W, H); c.restore();
+        }
+      }
+      return;
+    }
     // candlelight on the desk
     c.save(); c.globalCompositeOperation = 'multiply';
     const fl = 1 + 0.015 * Math.sin(t * 7) + 0.01 * Math.sin(t * 13);
@@ -352,6 +579,59 @@ window.defineStory = function (L) {
   const mark = (name, t, extra = {}) => MARKS.push(Object.assign({ scene: SC.length, name, t }, extra));
   const add = (o) => { SC.push(o); (o.passages || []).forEach((P) => PASS.push({ scene: SC.length - 1, P })); };
 
+  const charAt = (P, word) => { const plain = P.chars.map((c2) => c2.ch).join(''); const i = plain.indexOf(word); return i < 0 ? P.written : P.chars[i].at; };
+  if (L.variant === 'opening') {
+    // PROLOGUE: a match, a candle, a book
+    const p1 = passage({ mode: 'top', at: 3.0, night: true, size: 66, y: 64, cps: 13, text: '*This is the story of an empire.*' });
+    const p2 = passage({ mode: 'top', at: p1.written + 0.9, night: true, size: 66, y: 64 + 66 * 1.34, cps: 13, text: '*The greatest the world has ever known.*' });
+    p1.out = p2.out = p2.written + 1.6; p1.gone = p2.gone = p2.out + 0.9;
+    const openAt = p2.gone - 0.2, riffle0 = openAt + 2.5, plateAt = riffle0 + 1.3;
+    const f1 = passage({ mode: 'bookCentre', at: plateAt + 1.2, size: 86, cps: 10, text: 'It begins with {you.}', hold: 2.0, sink: true });
+    const into = f1.gone + 0.2, travel = 3.8, d = into + travel;
+    mark('strike', 1.0); mark('title', p1.at); mark('open', openAt); mark('riffle', riffle0, { d: 1.6 }); mark('begins', f1.at); mark('zoom', into, { d: travel });
+    PASS.push({ scene: SC.length, P: f1 });
+    add({ name: 'prologue', d, passages: [p1, p2], draw(c, t) {
+      const zoom = lerp(0.62, 1, ease(seg(t, openAt - 1.2, openAt + 2.4)));
+      const cam0 = { s: zoom, cx: CX + 420 * (1 - ease(seg(t, openAt - 0.3, openAt + 2.2))), cy: CY - 60 * (1 - zoom) / 0.38 };
+      const k = ease(seg(t, into, into + travel));
+      const open = ease(seg(t, openAt, openAt + 2.4));
+      const riff = [0, 1, 2, 3, 4, 5].map((i) => ease(seg(t, riffle0 + i * 0.2, riffle0 + i * 0.2 + 0.75)));
+      const glow = t < openAt ? 0 : t < openAt + 2.4 ? Math.sin(open * PI) * 0.9 + open * 0.3 : 0.3 * (1 - seg(t, openAt + 2.4, plateAt + 1.5)) + 0.25 * Math.sin(seg(t, riffle0, riffle0 + 1.6) * PI);
+      book(c, t, { cam: k > 0 ? camInto(k) : cam0, open, endpaper: t < riffle0 + 0.75, riffle: riff,
+        plate: t > riffle0 ? (x) => WORLD.throne(x, 0, {}) : null, plateAppear: seg(t, plateAt - 0.6, plateAt + 1.6), plateCaption: 'Plate I.',
+        glow, sheen: seg(t, 4.2, 6.2),
+        candle: { x: 1905, y: 1010, h: 330, lit: seg(t, 1.0, 1.4), spark: Math.max(0, 1 - Math.abs(t - 1.05) / 0.25) },
+        light: { r: k > 0 ? 1 : ease(seg(t, 1.0, 4.4)) }, lightFade: 1 - k,
+        leftPage: (cc) => drawPassage(cc, f1, t) });
+      if (k > 0) { c.fillStyle = `rgba(0,0,0,${0})`; }
+    } });
+
+    // I · THE THRONE
+    {
+      const q1 = passage({ mode: 'top', at: 1.0, size: 64, text: 'You now sit on the throne.', hold: 1.4 });
+      const q2 = passage({ mode: 'top', at: q1.gone + 0.2, text: 'Your servants stand shoulder to shoulder, / as far as the eye can see.', hold: 1.6 });
+      const q3 = passage({ mode: 'top', at: q2.gone + 0.2, text: 'They have read everything. They can build anything. / They do not tire, and they do not resent.', hold: 1.8 });
+      const q4 = passage({ mode: 'top', at: q3.gone + 0.2, size: 64, text: 'They are waiting for your {instruction.}', hold: 3.8 });
+      const bowAt = charAt(q4, 'instruction') + 0.5, d = q4.gone + 0.4;
+      mark('throne', 0); mark('bow', bowAt); mark('cut', d);
+      add({ name: 'throne', d, passages: [q1, q2, q3, q4], draw(c, t) { WORLD.throne(c, t, { bowAt, drift: d }); scrim(c, 'top', ease(seg(t, 0, 0.9)), false); } });
+    }
+    // II · THE BED
+    {
+      const b1 = passage({ mode: 'side', at: 1.4, night: true, text: 'Of course, you are not in a palace.', hold: 1.3 });
+      const b2 = passage({ mode: 'side', at: b1.gone + 0.2, night: true, text: 'You are in bed. / You have not brushed your teeth.', hold: 1.5 });
+      const b3 = passage({ mode: 'side', at: b2.gone + 0.2, night: true, text: 'You speak a few sentences into the dark, and somewhere, in a place that is not a place, something begins to build for you.', hold: 2.6 });
+      const b4 = passage({ mode: 'centre', at: b3.gone + 0.6, night: true, size: 86, cps: 12, text: 'You did not earn this. / You are not dressed.', hold: 3.2 });
+      const lettersAt = charAt(b3, 'dark'), buildAt = lettersAt + 2.2;
+      mark('bed', 0); mark('dark', lettersAt); mark('earn', b4.at);
+      add({ name: 'bed', d: b4.gone + 2.8, passages: [b1, b2, b3, b4], draw(c, t) {
+        WORLD.bed(c, t, { lettersAt, buildAt });
+        scrim(c, 'side', 1 - seg(t, b3.out, b3.gone), true);
+        const veil = ease(seg(t, b4.at - 0.9, b4.at)) * (1 - ease(seg(t, b4.out, b4.gone)));
+        if (veil > 0) { c.fillStyle = `rgba(8,8,14,${0.8 * veil})`; c.fillRect(0, 0, W, H); }
+      } });
+    }
+  } else {
   // PROLOGUE: the closed book
   {
     const p0 = passage({ mode: 'top', at: 1.6, size: 60, text: '*I want to tell you a story* / *about the saddest empires.*', hold: 2.2, night: true, y: 70 });
@@ -475,10 +755,12 @@ window.defineStory = function (L) {
     } });
   }
 
+  }
+
   /* ------------------------------------------------------------ timeline + render */
   const XF = 1.0;
   let acc = 0;
-  SC.forEach((s, i) => { const hard = i === 0 || ['morning', 'firstpage', 'epilogue'].includes(s.name); s.t0 = hard ? acc : acc - XF; s.t1 = s.t0 + s.d; acc = s.t1; s.xf = !hard; });
+  SC.forEach((s, i) => { const hard = i === 0 || ['morning', 'firstpage', 'epilogue', 'throne', 'bed'].includes(s.name); s.t0 = hard ? acc : acc - XF; s.t1 = s.t0 + s.d; acc = s.t1; s.xf = !hard; });
   const DURATION = acc;
   const out = document.getElementById('film').getContext('2d');
   const bufA = mk(), bufB = mk();
@@ -510,7 +792,7 @@ window.defineStory = function (L) {
   }
   buildBook();
   const cues = () => ({
-    cut: 'story', duration: DURATION,
+    cut: L.variant === 'opening' ? 'opening' : 'story', duration: DURATION,
     scenes: SC.map((s) => ({ name: s.name, t0: +s.t0.toFixed(3), d: s.d })),
     passages: PASS.map(({ scene, P }) => ({ t: +(SC[scene].t0 + P.at).toFixed(3), end: +(SC[scene].t0 + P.written).toFixed(3), voice: P.voice, gold: /\{/.test(P.text), scene })),
     marks: MARKS.map((m) => Object.assign({}, m, { t: +(SC[m.scene].t0 + m.t).toFixed(3) })),
