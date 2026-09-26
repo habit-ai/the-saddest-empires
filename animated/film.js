@@ -1415,9 +1415,9 @@
     lineB = new LineScene(document.getElementById('line-b'), { gate: false, count: 3200, firstX: -3.5, z0: 9 });
     await new Promise((res) => { const chk = () => (lineA.servants && document.readyState === 'complete' ? res() : setTimeout(chk, 50)); chk(); });
     await new Promise((res) => setTimeout(res, 1200)); // sprite mipmaps
-    if (CUT === 'story' || CUT === 'opening') {
+    if (CUT === 'story' || CUT === 'opening' || CUT === 'complete') {
       BOOK = window.defineStory({ variant: CUT, W, H, PI, TAU, clamp, lerp, seg, ease, easeOut, easeIn, rng, mk, IMG, PAPER, GRAIN, Etch, hatch, ellipsePts, rect, candle, sprite, stars,
-        paper, drawLine, lineC, G, GS, gX, gY, gP, GLASS_R, GOLD_CROWN, FACADE });
+        paper, drawLine, lineC, G, GS, gX, gY, gP, GLASS_R, GOLD_CROWN, FACADE, MIRROR, TABLET });
     }
     if (CUT === 'book') {
       G.cx = 345; const glassP = buildGlass(); G.cx = CX;

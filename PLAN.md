@@ -61,6 +61,25 @@ The storyboard below was written from the vault draft. Rows 10, 14, 18, 20, 24â€
 hosted version and need re-cutting before Phase 3. New beats to add from the hosted text: *the mirror is accurate, the face is bland*
 and *Marcus kneeling before his son*.
 
+### The complete film (2026-09-26)
+
+`film.html?cut=complete` is the whole script (`SCRIPT.md`): the approved opening (`?cut=opening`, prologue, the throne and the bed),
+then chapters IIIâ€“VII and the epilogue, about 5 minutes. The new scenes follow the opening's rules: every passage has a designated
+place (side, lower, top, centre with a veil, the letter's sheet, the book's left page), and each chapter name appears quietly at the top or bottom of its first scene.
+
+- **III The Inheritance**: Marcus Aurelius by lamplight (narration in the dark beside him); "Is this necessary?" cut into a stone tablet
+  letter by letter; eight browser tabs open over eight half-built temple wings, which fade as they are abandoned.
+- **IV The Inversion**: a gilded balance, *Labour* against *Attention*. Servants pour onto the labour pan until it tips, and the
+  attention candles go out one by one. Then the Line, and "The limit is no longer what can be done. The limit is you." on a cleared frame.
+- **V The Gap**: the glass (apple, then orange to fifty, then ninety, the gap outlined in gold), then the mirror with the featureless
+  reflection, and "The failure is not the servant. It is the king." on a dark veil.
+- **VI The Letter**: the handwritten sheet, "no cause." in gold, the lamp goes out into silence; then the ruins at night.
+- **VII The Crown**: the hall again at first light, seen from the aisle toward an empty throne, the crown on the floor at the foot of the dais.
+- **Epilogue**: the camera pulls out of the plate into the book; "Pick it up." is written in gold and sinks into the page; the page
+  turns back, the cover closes, the gilt title catches the candle, and the candle goes out.
+- Score: `tools/score5.py` (the opening score, continued). Two silences: after the bow, and after "no cause.". The theme resolves
+  to D major only on "Pick it up.". Foley adds a chisel, the book closing and the snuffed flame.
+
 ## Where we start
 
 - Live today: `habit-ai.github.io/the-saddest-empires/`, one static `index.html` (about 2,300 words), parchment palette,

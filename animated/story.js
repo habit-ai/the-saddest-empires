@@ -14,7 +14,7 @@
 
    defineStory(lib) is called by film.js once assets and fonts are ready. */
 window.defineStory = function (L) {
-  const { W, H, PI, TAU, clamp, lerp, seg, ease, easeOut, rng, mk, IMG, PAPER, Etch, hatch, ellipsePts, candle, stars } = L;
+  const { W, H, PI, TAU, clamp, lerp, seg, ease, easeOut, easeIn, rng, mk, IMG, PAPER, Etch, hatch, ellipsePts, rect, candle, stars } = L;
   const CX = W / 2, CY = H / 2;
   const INK = '#1d120b', MOON = '#efe6d6', GOLD_A = '#7a5208', GOLD_B = '#b8841c';
 
@@ -466,6 +466,290 @@ window.defineStory = function (L) {
     }
   };
 
+  /* ============================================================ the rest of the story: worlds */
+  // a chapter's name, small and quiet at the top of its first scene
+  function chapterMark(c, t, name, night, y = 58) {
+    const a = ease(seg(t, 0.4, 1.6)) * (1 - ease(seg(t, 5.0, 6.4)));
+    if (a <= 0) return;
+    c.font = '400 24px "IM Fell English SC"'; c.letterSpacing = '6px'; c.textAlign = 'center';
+    c.fillStyle = night ? `rgba(233,223,204,${0.75 * a})` : `rgba(45,28,18,${0.7 * a})`;
+    c.fillText(name, CX, y); c.letterSpacing = '0px'; c.textAlign = 'left';
+  }
+  // one warm light in a dark room: everything outside its pool falls away
+  function lampLight(c, x, y, r, t, strength = 1) {
+    const fl = 1 + 0.02 * Math.sin(t * 6.3) + 0.012 * Math.sin(t * 11.7);
+    c.save(); c.globalCompositeOperation = 'multiply';
+    const g = c.createRadialGradient(x, y, 20, x, y, r * fl);
+    g.addColorStop(0, 'rgb(255,238,208)'); g.addColorStop(0.45, 'rgb(196,150,104)'); g.addColorStop(1, `rgb(${Math.round(20 + 30 * (1 - strength))},14,10)`);
+    c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
+  }
+  function oilLamp(c, x, y, t, lit = 1) {
+    const e = new Etch();
+    e.add(ellipsePts(x, y, 70, 22, 0, PI), 1.6); e.add([[x - 70, y], [x - 40, y - 26], [x + 40, y - 26], [x + 70, y]], 1.6);
+    e.add([[x + 40, y - 26], [x + 110, y - 36], [x + 118, y - 30], [x + 60, y - 12]], 1.4);             // the spout
+    e.add([[x - 70, y + 4], [x - 110, y - 20], [x - 96, y - 44]], 1.3);                                  // the handle
+    e.addAll(hatch(ellipsePts(x, y, 68, 20, 0, PI, 30), 0, 4), 0.6, 0.6);
+    e.draw(c, 1, INK);
+    if (lit > 0) {
+      const fx = x + 114, fy = y - 40, fh = 46 * (1 + 0.08 * Math.sin(t * 13) + 0.05 * Math.sin(t * 29)) * lit;
+      const fg = c.createRadialGradient(fx, fy - fh * 0.3, 0, fx, fy - fh * 0.4, fh * 0.9);
+      fg.addColorStop(0, 'rgba(255,252,230,1)'); fg.addColorStop(0.45, 'rgba(255,196,90,1)'); fg.addColorStop(1, 'rgba(230,110,30,0)');
+      c.fillStyle = fg; c.beginPath(); c.moveTo(fx, fy - fh);
+      c.bezierCurveTo(fx + fh * 0.34, fy - fh * 0.45, fx + fh * 0.3, fy, fx, fy); c.bezierCurveTo(fx - fh * 0.3, fy, fx - fh * 0.34, fy - fh * 0.45, fx, fy - fh); c.fill();
+    }
+  }
+  WORLD.study = (c, t, o = {}) => {
+    // Marcus Aurelius at his desk, at night, writing to himself
+    L.paper(c, 'day');
+    const e = new Etch();
+    // an arched window with the night in it
+    const wx = 1180, wy = 110, ww = 300, wh = 420;
+    e.add([[wx, wy + wh], [wx, wy + ww / 2], ...ellipsePts(wx + ww / 2, wy + ww / 2, ww / 2, ww / 2, PI, TAU, 40), [wx + ww, wy + wh], [wx, wy + wh]], 2);
+    e.add([[wx + ww / 2, wy], [wx + ww / 2, wy + wh]], 1.2); e.add([[wx, wy + wh * 0.62], [wx + ww, wy + wh * 0.62]], 1.2);
+    e.addAll(hatch([[wx + 4, wy + wh - 4], [wx + 4, wy + ww / 2], [wx + ww / 2, wy + 4], [wx + ww - 4, wy + ww / 2], [wx + ww - 4, wy + wh - 4]], 0, 3.2, 0, 2), 0.7, 0.85);
+    // the stone wall around it
+    e.addAll(hatch([[0, 0], [W, 0], [W, 700], [0, 700]], 90, 16, 6, 9), 0.5, 0.2);
+    // the desk
+    e.add([[640, 760], [1760, 760], [1740, 790], [660, 790], [640, 760]], 2);
+    e.add([[700, 790], [700, 1080]], 2); e.add([[1700, 790], [1700, 1080]], 2);
+    e.addAll(hatch([[660, 790], [1740, 790], [1740, 800], [660, 800]], 0, 3), 0.7, 0.8);
+    // a scroll unrolled across it, with lines of writing
+    e.add([[900, 740], [1260, 740], [1270, 752], [890, 752], [900, 740]], 1.3);
+    e.add(ellipsePts(890, 746, 10, 14), 1.2); e.add(ellipsePts(1270, 746, 10, 14), 1.2);
+    e.draw(c, 1, INK);
+    c.fillStyle = 'rgba(40,24,14,.5)'; for (let i = 0; i < 5; i++) c.fillRect(930, 743 + (i % 2) * 4, 60 + ((i * 41) % 220), 1.4);
+    oilLamp(c, 1360, 752, t);
+    // Marcus: the bearded figure from the court, standing at his desk
+    c.strokeStyle = 'rgba(43,26,18,.35)'; c.lineWidth = 1; for (let y = 1000; y < H; y += 14 + (y - 1000) * 0.2) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+    c.fillStyle = 'rgba(40,24,14,.28)'; c.beginPath(); c.ellipse(1520, 1062, 190, 18, 0, 0, TAU); c.fill();
+    const img = IMG.s1, h = 720, w = (img.width / img.height) * h;
+    c.save(); c.translate(1580, 1066); c.scale(-1, 1); c.drawImage(img, -w / 2, -h, w, h); c.restore();
+    lampLight(c, 1470, 700, 1150, t);
+  };
+  WORLD.tablet = (c, t, o = {}) => {
+    // the question, cut into stone, lit from the side
+    L.paper(c, 'day');
+    L.TABLET.draw(c, ease(seg(t, 0.2, 2.0)), INK);
+    const lines = ['ASK YOURSELF AT EVERY MOMENT:', 'IS THIS NECESSARY?'];
+    c.font = '56px "Cinzel"'; c.textBaseline = 'middle';
+    let n = 0; const per = 0.07, start = 1.4;
+    lines.forEach((ln, li) => {
+      const y = 480 + li * 110, w = [...ln].reduce((a, ch) => a + c.measureText(ch).width + 6, -6); let x = CX - w / 2;
+      for (const ch of ln) {
+        const k = seg(t, start + n * per, start + n * per + 0.25);
+        if (k > 0) { c.globalAlpha = k; c.fillStyle = 'rgba(255,250,240,.9)'; c.fillText(ch, x + 2, y + 2); c.fillStyle = INK; c.fillText(ch, x, y); }
+        x += c.measureText(ch).width + 6; n++;
+      }
+    });
+    c.globalAlpha = 1;
+    lampLight(c, 1500, 300, 1500, t, 0.6);
+  };
+  const WINGS = (() => {
+    const out = [], r = rng(8);
+    for (let i = 0; i < 8; i++) {
+      const cx = 150 + i * 231, e = new Etch(), base = 790, cols = 3, sw = 176, top = 470 + r() * 40;
+      e.add(rect(cx - sw / 2 - 10, base, sw + 20, 16), 1.3);
+      for (let k = 0; k < cols; k++) {
+        const x = cx - sw / 2 + 22 + k * ((sw - 44) / (cols - 1));
+        e.add([[x - 11, base], [x - 9, top + 14]], 1.3); e.add([[x + 11, base], [x + 9, top + 14]], 1.3);
+        e.add([[x - 2, base - 4], [x - 2, top + 18]], 0.7, 0.7);
+        e.add(rect(x - 16, top, 32, 14), 1.1);
+      }
+      e.add(rect(cx - sw / 2 - 6, top - 34, sw + 12, 34), 1.3);
+      e.add([[cx - sw / 2 - 16, top - 34], [cx, top - 92], [cx + sw / 2 + 16, top - 34]], 1.4);
+      e.addAll(hatch([[cx - sw / 2 + 2, top - 36], [cx, top - 86], [cx + sw / 2 - 2, top - 36]], 0, 5, 1, i), 0.6, 0.5);
+      e.addAll(hatch([[cx - sw / 2 + 4, top + 16], [cx + sw / 2 - 4, top + 16], [cx + sw / 2 - 4, base - 2], [cx - sw / 2 + 4, base - 2]], 0, 7, 3, i + 20), 0.5, 0.25);
+      out.push({ cx, e, stop: 0.28 + r() * 0.5, label: ['draft', 'analysis', 'script', 'dashboard', 'essay', 'app', 'plan', 'email'][i] });
+    }
+    return out;
+  })();
+  WORLD.tabs = (c, t, o = {}) => {
+    L.paper(c, 'day');
+    c.strokeStyle = 'rgba(43,26,18,.5)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, 806); c.lineTo(W, 806); c.stroke();
+    WINGS.forEach((wg, i) => {
+      const born = 0.6 + i * 0.55, k = easeOut(seg(t, born, born + 0.3));
+      if (k <= 0) return;
+      // the tab: flat, modern, and out of place in an engraving
+      c.globalAlpha = k;
+      c.fillStyle = i === 7 ? '#ffffff' : '#e6e3de';
+      c.beginPath(); c.moveTo(wg.cx - 100, 190); c.lineTo(wg.cx - 86, 150); c.lineTo(wg.cx + 86, 150); c.lineTo(wg.cx + 100, 190); c.closePath(); c.fill();
+      c.fillStyle = '#555'; c.font = '20px -apple-system, "Helvetica Neue", Arial, sans-serif'; c.textBaseline = 'middle';
+      c.fillText(wg.label, wg.cx - 70, 171); c.fillText('×', wg.cx + 68, 171); c.textBaseline = 'alphabetic';
+      // a thread from the tab down to its wing
+      c.strokeStyle = 'rgba(43,26,18,.25)'; c.lineWidth = 1; c.setLineDash([3, 5]); c.beginPath(); c.moveTo(wg.cx, 192); c.lineTo(wg.cx, 360); c.stroke(); c.setLineDash([]);
+      const grow = ease(seg(t, born + 0.3, born + 2.6)) * wg.stop;
+      const gone = seg(t, o.abandonAt + i * 0.25, o.abandonAt + i * 0.25 + 1.6);
+      wg.e.draw(c, grow, INK, lerp(1, 0.22, gone) * k);
+      c.globalAlpha = 1;
+    });
+  };
+  WORLD.balance = (c, t, o = {}) => {
+    L.paper(c, 'day');
+    c.save(); c.translate(CX, 1010); c.scale(0.95, 0.95); c.translate(-CX, -960);
+    const pv = [CX, 330], Lb = 520;
+    const n = Math.round(lerp(1, 46, easeIn(seg(t, o.pourAt, o.pourAt + 4.5))));
+    const lit = (j) => t < o.outAt + j * 0.45;
+    const m = [0, 1, 2, 3, 4, 5, 6].filter((j) => j === 0 || lit(j)).length;
+    const target = clamp((n - m * 3) / 30, -0.2, 0.2);
+    const th = lerp(-0.18, target, ease(seg(t, o.pourAt, o.pourAt + 5)));
+    const left = [pv[0] - Lb * Math.cos(th), pv[1] + Lb * Math.sin(th)], right = [pv[0] + Lb * Math.cos(th), pv[1] - Lb * Math.sin(th)];
+    // post and base, engraved
+    const post = [[CX - 12, 930], [CX - 7, 330], [CX + 7, 330], [CX + 12, 930]];
+    c.fillStyle = 'rgba(248,242,230,1)'; c.beginPath(); post.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
+    new Etch().add([...post, post[0]], 1.8).addAll(hatch(post, 90, 3), 0.7, 0.5).draw(c);
+    const base = [[CX - 170, 960], [CX - 100, 930], [CX + 100, 930], [CX + 170, 960]];
+    new Etch().add([...base, base[0]], 1.8).addAll(hatch(base, 0, 4), 0.7, 0.7).draw(c);
+    // the beam, gilded
+    c.save(); c.translate(pv[0], pv[1]); c.rotate(-th);
+    const bg2 = c.createLinearGradient(0, -9, 0, 9); bg2.addColorStop(0, '#e6bf62'); bg2.addColorStop(1, '#7c5410');
+    c.fillStyle = bg2; c.fillRect(-Lb - 10, -8, 2 * Lb + 20, 16); c.strokeStyle = INK; c.lineWidth = 1.6; c.strokeRect(-Lb - 10, -8, 2 * Lb + 20, 16);
+    c.restore();
+    c.fillStyle = '#b8841c'; c.beginPath(); c.arc(pv[0], pv[1], 18, 0, TAU); c.fill(); c.strokeStyle = INK; c.stroke();
+    const pan = ([ex, ey], label, fill) => {
+      const py = ey + 280;
+      c.strokeStyle = INK; c.lineWidth = 1.3;
+      for (const dx of [-150, 0, 150]) { c.beginPath(); c.moveTo(ex, ey); c.lineTo(ex + dx, py - (dx ? 0 : 60)); c.stroke(); }
+      c.fillStyle = 'rgba(248,242,230,1)'; c.beginPath(); c.ellipse(ex, py, 162, 52, 0, 0, PI); c.fill();
+      new Etch().add(ellipsePts(ex, py, 162, 22), 2).add(ellipsePts(ex, py, 162, 52, 0, PI), 2).addAll(hatch(ellipsePts(ex, py, 160, 50, 0, PI, 30), 0, 5), 0.6, 0.55).draw(c);
+      fill(ex, py);
+      c.font = '400 30px "IM Fell English SC"'; c.letterSpacing = '8px'; c.textAlign = 'center'; c.fillStyle = INK; c.fillText(label, ex, py + 108); c.textAlign = 'left'; c.letterSpacing = '0px';
+    };
+    pan(left, 'Labour', (ex, py) => {
+      const r = rng(4), sp = [IMG.s1, IMG.s2, IMG.s3, IMG.s4, IMG.s5, IMG.s6];
+      for (let i = n - 1; i >= 0; i--) {
+        const row = Math.floor(Math.sqrt(i * 1.1)), inRow = i - Math.floor((row * row) / 1.1);
+        const x = ex + (inRow % 2 ? 1 : -1) * Math.ceil(inRow / 2) * 34 + (r() - 0.5) * 8, h = 120 - row * 4, w = (sp[i % 6].width / sp[i % 6].height) * h;
+        const k = easeOut(clamp((t - o.pourAt - Math.log(i + 1) * 0.9) / 0.4 + (i === 0 ? 99 : 0)));
+        c.globalAlpha = k; c.drawImage(spriteAt(i % 6, h), x - w / 2, py - 4 - row * 30 - h - (1 - k) * 40, w, h);
+      }
+      c.globalAlpha = 1;
+    });
+    pan(right, 'Attention', (ex, py) => {
+      for (let j = 6; j >= 0; j--) {
+        const fade = j === 0 ? 1 : 1 - seg(t, o.outAt + j * 0.45, o.outAt + j * 0.45 + 0.4);
+        if (fade <= 0) continue;
+        candle(c, ex + (j === 0 ? 0 : (j % 2 ? -1 : 1) * Math.ceil(j / 2) * 42), py - 6, 110, t, j === 0 ? 1 : fade);
+      }
+    });
+    c.restore();
+  };
+  WORLD.mirror = (c, t, o = {}) => {
+    if (!o.noPaper) L.paper(c, 'dusk');
+    c.save(); c.translate(CX, 520); const z = lerp(1, 1.08, ease(clamp(t / (o.d || 16)))); c.scale(z, z); c.translate(-CX, -520);
+    // two servants hold it up to you
+    for (const [i, x, flip] of [[1, 590, false], [3, 1340, true]]) {
+      const img = IMG['s' + (i + 1)], h = 620, w = (img.width / img.height) * h;
+      c.save(); c.translate(x, 1040); if (flip) c.scale(-1, 1); c.drawImage(img, -w / 2, -h, w, h); c.restore();
+    }
+    const f = seg(t, 0.8, 2.4);
+    c.save(); c.beginPath(); c.ellipse(CX, 500, 250, 330, 0, 0, TAU); c.clip();
+    const sg3 = c.createLinearGradient(CX - 250, 170, CX + 250, 830);
+    sg3.addColorStop(0, `rgba(222,222,218,${f})`); sg3.addColorStop(0.5, `rgba(186,188,188,${f})`); sg3.addColorStop(1, `rgba(214,214,210,${f})`);
+    c.fillStyle = sg3; c.fillRect(0, 0, W, H);
+    const b = seg(t, o.faceAt ?? 3, (o.faceAt ?? 3) + 3);
+    c.filter = 'blur(7px)'; c.globalAlpha = 0.5 * b; c.fillStyle = '#9a9a98';
+    c.beginPath(); c.ellipse(CX, 470, 95, 125, 0, 0, TAU); c.fill();
+    c.beginPath(); c.ellipse(CX, 800, 230, 170, 0, PI, TAU); c.fill();
+    c.filter = 'none'; c.globalAlpha = 1;
+    c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 3; c.beginPath(); c.moveTo(CX - 170, 260); c.lineTo(CX - 60, 220); c.stroke();
+    c.restore();
+    L.MIRROR.draw(c, ease(seg(t, 0.1, 2.4)), INK);
+    c.restore();
+  };
+  WORLD.ruins = (c, t, o = {}) => {
+    L.paper(c, 'night');
+    const img = IMG.ruins, cover = Math.max(W / img.width, H / img.height), k = ease(clamp(t / (o.d || 10)));
+    const s = cover * lerp(1.18, 1.0, k), w = img.width * s, h = img.height * s;
+    c.save(); c.globalAlpha = 0.95; c.filter = 'invert(1) sepia(.45) brightness(.62) contrast(1.25)';
+    c.drawImage(img, (W - w) / 2, (H - h) * lerp(0.4, 0.55, k), w, h); c.restore();
+    c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = 'rgb(118,116,140)'; c.fillRect(0, 0, W, H); c.restore();
+    stars(c, t, 90, 17, 0.5);
+  };
+  // the hall again, seen from the aisle: the throne on its dais, empty, the crown on the floor
+  const COURT_SIDES = (() => {
+    const r = rng(41), a = [];
+    for (let z = 3.6; z < 9.6; z *= 1.12) for (let j = 0; j < 3; j++) for (const sgn of [-1, 1]) a.push({ z: z * (1 + (r() - 0.5) * 0.03), x: sgn * (2.4 + j * 1.2 + (r() - 0.5) * 0.2), s: Math.floor(r() * 6), flip: sgn > 0, h: 1.75 * (0.92 + r() * 0.14) });
+    return a.sort((p2, q) => q.z - p2.z);
+  })();
+  WORLD.hallEnd = (c, t, o = {}) => {
+    L.paper(c, 'first');
+    const VX = 960, VY = 420, f = 1000, camH = 1.8;
+    const X = (x, z) => VX + (f * x) / z, Y = (y, z) => VY + (f * (camH - y)) / z;
+    const dr = 1 + 0.03 * ease(clamp(t / (o.d || 18)));
+    c.save(); c.translate(VX, 560); c.scale(dr, dr); c.translate(-VX, -560);
+    // first light through tall windows behind the throne
+    c.save(); c.globalCompositeOperation = 'screen';
+    for (const sgn of [-1, 1]) {
+      const gx = X(sgn * 3.2, 16), gy = Y(9, 16);
+      const rg = c.createLinearGradient(gx, gy, VX + sgn * 200, 1080);
+      rg.addColorStop(0, 'rgba(255,236,200,.5)'); rg.addColorStop(1, 'rgba(255,236,200,0)');
+      c.fillStyle = rg; c.beginPath(); c.moveTo(gx - 40, gy); c.lineTo(gx + 40, gy); c.lineTo(VX + sgn * 520 + 200, 1080); c.lineTo(VX + sgn * 520 - 200, 1080); c.closePath(); c.fill();
+    }
+    c.restore();
+    // floor, back wall with two tall windows
+    c.strokeStyle = 'rgba(43,26,18,.24)'; c.lineWidth = 1;
+    for (let x = -10.8; x <= 10.8; x += 1.2) { c.beginPath(); c.moveTo(X(x, 3), Y(0, 3)); c.lineTo(X(x, 16), Y(0, 16)); c.stroke(); }
+    for (let z = 3; z < 16; z *= 1.1) { c.beginPath(); c.moveTo(X(-11, z), Y(0, z)); c.lineTo(X(11, z), Y(0, z)); c.stroke(); }
+    const bw = [[X(-11, 16), Y(0, 16)], [X(11, 16), Y(0, 16)], [X(11, 16), Y(16, 16)], [X(-11, 16), Y(16, 16)]];
+    c.fillStyle = '#f1ece2'; c.beginPath(); bw.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
+    new Etch().addAll(hatch(bw, 0, 3.4, 0, 5), 0.6, 0.35).draw(c);
+    for (const sgn of [-1, 1]) {
+      const wx0 = X(sgn * 3.2 - 0.9, 16), wx1 = X(sgn * 3.2 + 0.9, 16), wy0 = Y(11, 16), wy1 = Y(4, 16);
+      c.fillStyle = 'rgba(255,248,232,1)'; c.fillRect(Math.min(wx0, wx1), wy0, Math.abs(wx1 - wx0), wy1 - wy0);
+      c.strokeStyle = INK; c.lineWidth = 1.6; c.strokeRect(Math.min(wx0, wx1), wy0, Math.abs(wx1 - wx0), wy1 - wy0);
+    }
+    // the dais: three steps, the carpet climbing them
+    const steps = 3, sd = 0.7, sh = 0.32, z0 = 9.4;
+    for (let k = steps - 1; k >= 0; k--) {
+      const zf = z0 + k * sd, yT = (k + 1) * sh;
+      const top = [[X(-3.4, zf), Y(yT, zf)], [X(3.4, zf), Y(yT, zf)], [X(3.4, zf + sd), Y(yT, zf + sd)], [X(-3.4, zf + sd), Y(yT, zf + sd)]];
+      const front = [[X(-3.4, zf), Y(yT - sh, zf)], [X(3.4, zf), Y(yT - sh, zf)], [X(3.4, zf), Y(yT, zf)], [X(-3.4, zf), Y(yT, zf)]];
+      c.fillStyle = '#ece4d4'; c.beginPath(); top.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
+      c.fillStyle = '#d9cdb6'; c.beginPath(); front.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
+      c.strokeStyle = INK; c.lineWidth = 1.3; c.beginPath(); front.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke();
+      c.fillStyle = '#b8841c'; c.fillRect(X(-3.4, zf), Y(yT, zf) - 1.5, X(3.4, zf) - X(-3.4, zf), 3);
+      c.fillStyle = 'rgb(128,38,30)';
+      c.beginPath(); c.moveTo(X(-0.8, zf), Y(yT - sh, zf)); c.lineTo(X(0.8, zf), Y(yT - sh, zf)); c.lineTo(X(0.8, zf), Y(yT, zf)); c.lineTo(X(0.8, zf + sd), Y(yT, zf + sd)); c.lineTo(X(-0.8, zf + sd), Y(yT, zf + sd)); c.lineTo(X(-0.8, zf), Y(yT, zf)); c.closePath(); c.fill();
+    }
+    // the throne, empty
+    const tz = z0 + steps * sd + 0.6, ty = steps * sh;
+    const tx = (x) => X(x, tz), tyy = (y) => Y(ty + y, tz);
+    const back = [[tx(-1.3), tyy(0.9)], [tx(-1.3), tyy(3.6)], ...ellipsePts(tx(0), tyy(3.6), tx(1.3) - tx(0), (tx(1.3) - tx(0)) * 0.8, PI, TAU, 30), [tx(1.3), tyy(0.9)]];
+    const tg = c.createLinearGradient(tx(-1.3), 0, tx(1.3), 0); tg.addColorStop(0, '#7c5410'); tg.addColorStop(0.45, '#e2b75a'); tg.addColorStop(1, '#7c5410');
+    c.fillStyle = tg; c.beginPath(); back.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
+    c.strokeStyle = INK; c.lineWidth = 1.6; c.stroke();
+    const inner = back.map(([x, y]) => [tx(0) + (x - tx(0)) * 0.72, tyy(0.9) + (y - tyy(0.9)) * 0.86]);
+    c.fillStyle = 'rgb(120,34,28)'; c.beginPath(); inner.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
+    new Etch().addAll(hatch(inner, 90, 4, 0, 3), 0.6, 0.35).draw(c);
+    c.fillStyle = tg; c.fillRect(tx(-1.6), tyy(1.0), tx(1.6) - tx(-1.6), tyy(0.8) - tyy(1.0));
+    c.strokeRect(tx(-1.6), tyy(1.0), tx(1.6) - tx(-1.6), tyy(0.8) - tyy(1.0));
+    for (const sgn of [-1, 1]) { c.fillStyle = tg; c.fillRect(tx(sgn * 1.55) - 6, tyy(1.9), 12, tyy(0) - tyy(1.9)); c.strokeRect(tx(sgn * 1.55) - 6, tyy(1.9), 12, tyy(0) - tyy(1.9)); c.beginPath(); c.arc(tx(sgn * 1.55), tyy(1.9), 12, 0, TAU); c.fillStyle = '#d9a940'; c.fill(); c.stroke(); }
+    // the court, on both sides of the aisle, still waiting
+    for (const p2 of COURT_SIDES) {
+      const hp = (f * p2.h) / p2.z, x = X(p2.x, p2.z), yf = Y(0, p2.z), img = spriteAt(p2.s, hp), w = (img.width / img.height) * hp;
+      c.save(); c.translate(x, yf); if (p2.flip) c.scale(-1, 1); c.globalAlpha = 1 - p2.z / 30; c.drawImage(img, -w / 2, -hp, w, hp); c.restore();
+    }
+    c.globalAlpha = 1;
+    // columns
+    for (const zc of [4.2, 6, 8.4, 11.6, 15]) for (const sgn of [-1, 1]) {
+      const xc = sgn * 9.4, x0 = X(xc - 0.55, zc), x1 = X(xc + 0.55, zc), yb = Y(0, zc), yt = Y(16, zc);
+      c.fillStyle = '#f4efe5'; c.fillRect(x0, yt, x1 - x0, yb - yt); c.strokeStyle = 'rgba(43,26,18,.8)'; c.lineWidth = 1.2; c.strokeRect(x0, yt, x1 - x0, yb - yt);
+      c.strokeStyle = 'rgba(43,26,18,.3)'; c.lineWidth = 0.8; const n = Math.max(3, Math.round((x1 - x0) / 6)); for (let q = 1; q < n; q++) { const xx = x0 + ((x1 - x0) * q) / n; c.beginPath(); c.moveTo(xx, yt); c.lineTo(xx, yb); c.stroke(); }
+    }
+    // the crown, on the floor at the foot of the dais
+    const cz = 5.4, cxp = X(0.62, cz), cyp = Y(0, cz), cs = (f * 0.95) / cz / 392;
+    c.fillStyle = 'rgba(58,34,24,.25)'; c.beginPath(); c.ellipse(cxp + 30 * cs * 5, cyp + 4, 260 * cs, 22 * cs, 0, 0, TAU); c.fill();
+    c.save(); c.translate(cxp, cyp); c.rotate(-1.35); c.scale(cs, cs);
+    c.globalAlpha = 0.8; c.drawImage(IMG.crown, -250, -392, 500, 392); c.globalAlpha = 1; c.drawImage(L.GOLD_CROWN, -250, -392, 500, 392);
+    const gl = o.gleamAt !== undefined ? seg(t, o.gleamAt - 0.3, o.gleamAt + 2.4) : 0;
+    c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.4 + 0.2 * Math.sin(t * 1.3) + (gl > 0 && gl < 1 ? 0.7 * Math.sin(gl * PI) : 0);
+    c.drawImage(L.GOLD_CROWN, -250, -392, 500, 392); c.restore();
+    c.restore();
+    c.save(); c.globalCompositeOperation = 'multiply';
+    const vg = c.createRadialGradient(VX, 560, 300, VX, 560, 1200); vg.addColorStop(0, 'rgb(255,250,240)'); vg.addColorStop(1, 'rgb(150,140,128)');
+    c.fillStyle = vg; c.fillRect(0, 0, W, H); c.restore();
+  };
+
   /* ============================================================ the book */
   const PAGE = { top: 78, bottom: 1002, lx: 116, rx: 1804 }, SPINE = W / 2;
   const PLATE = { x: 1022, y: 318, w: 720, h: 405 };          // 16:9, so the camera can travel into it exactly
@@ -690,7 +974,7 @@ window.defineStory = function (L) {
       c.strokeStyle = 'rgba(40,24,14,.8)'; c.lineWidth = 1.6; c.strokeRect(PLATE.x - 14, PLATE.y - 14, PLATE.w + 28, PLATE.h + 28);
       c.lineWidth = 0.8; c.strokeRect(PLATE.x - 6, PLATE.y - 6, PLATE.w + 12, PLATE.h + 12);
       o.plate(scx, t); c.drawImage(sceneCanvas, PLATE.x, PLATE.y, PLATE.w, PLATE.h);
-      c.font = 'italic 400 24px "IM Fell English"'; c.textAlign = 'center'; c.fillStyle = 'rgba(45,28,18,.7)'; c.fillText('Plate I.', PLATE.x + PLATE.w / 2, PLATE.y + PLATE.h + 56); c.textAlign = 'left';
+      c.font = 'italic 400 24px "IM Fell English"'; c.textAlign = 'center'; c.fillStyle = 'rgba(45,28,18,.7)'; c.fillText(o.plateCaption || 'Plate I.', PLATE.x + PLATE.w / 2, PLATE.y + PLATE.h + 56); c.textAlign = 'left';
       c.font = '400 22px "IM Fell English SC"'; c.letterSpacing = '5px'; c.textAlign = 'center'; c.fillStyle = 'rgba(45,28,18,.7)';
       c.fillText('The Saddest Empires', 1382, 128); c.letterSpacing = '0px'; c.textAlign = 'left';
     }
@@ -700,7 +984,7 @@ window.defineStory = function (L) {
     // once the leaf lies on the left, it is a page you can write on
     if (o.turnTheta >= PI) {
       c.font = '400 22px "IM Fell English SC"'; c.letterSpacing = '5px'; c.textAlign = 'center'; c.fillStyle = 'rgba(45,28,18,.7)';
-      c.fillText('I · The Throne', 534, 128); c.letterSpacing = '0px'; c.textAlign = 'left';
+      c.fillText(o.head || 'I · The Throne', 534, 128); c.letterSpacing = '0px'; c.textAlign = 'left';
       if (o.leftPage) o.leftPage(c, t);
     }
     // gold dust rising from the open pages
@@ -741,7 +1025,7 @@ window.defineStory = function (L) {
       c.fillStyle = gs; c.fillRect(0, 0, W, H); c.restore();
     }
     // the candle itself stays bright
-    if (o.candle.lit > 0) {
+    if (o.candle.lit > 0 || o.candle.always) {
       const [cx0, cy0] = toScreen(o.candle.x, o.candle.y);
       c.save(); c.translate(cx0, cy0); c.scale(cam.s, cam.s); candle(c, 0, 0, o.candle.h, t, o.candle.lit); c.restore();
       if (o.candle.spark > 0) {
@@ -767,7 +1051,7 @@ window.defineStory = function (L) {
   const add = (o) => { SC.push(o); (o.passages || []).forEach((P) => PASS.push({ scene: SC.length - 1, P })); };
 
   const charAt = (P, word) => { const plain = P.chars.map((c2) => c2.ch).join(''); const i = plain.indexOf(word); return i < 0 ? P.written : P.chars[i].at; };
-  if (L.variant === 'opening') {
+  if (L.variant === 'opening' || L.variant === 'complete') {
     // PROLOGUE: a match, a candle, a book
     const p1 = passage({ mode: 'top', at: 3.0, night: true, size: 66, y: 64, cps: 13, text: '*This is the story of an empire.*' });
     const p2 = passage({ mode: 'top', at: p1.written + 0.9, night: true, size: 66, y: 64 + 66 * 1.34, cps: 13, text: '*The greatest the world has ever known.*' });
@@ -817,6 +1101,132 @@ window.defineStory = function (L) {
         const veil = ease(seg(t, b4.at - 0.9, b4.at)) * (1 - ease(seg(t, b4.out, b4.gone)));
         if (veil > 0) { c.fillStyle = `rgba(8,8,14,${0.8 * veil})`; c.fillRect(0, 0, W, H); }
       } });
+    }
+    if (L.variant === 'complete') {
+      const veilOn = (c, t, P, col, amt = 0.8) => { const v = ease(seg(t, P.at - 0.9, P.at)) * (1 - ease(seg(t, P.out, P.gone))); if (v > 0) { c.fillStyle = `rgba(${col},${amt * v})`; c.fillRect(0, 0, W, H); } };
+      // III · THE INHERITANCE
+      {
+        const m1 = passage({ mode: 'side', at: 1.6, night: true, size: 56, text: 'The closest thing to the life you’ve been given is the life of an {emperor.}', hold: 1.4 });
+        const m2 = passage({ mode: 'side', at: m1.gone + 0.2, night: true, size: 56, text: 'Marcus Aurelius ruled a third of the world. / Every night he wrote himself the same question:', hold: 1.2 });
+        mark('chapter', 0); mark('marcus', m1.at);
+        add({ name: 'marcus', d: m2.gone + 0.4, passages: [m1, m2], draw(c, t) {
+          WORLD.study(c, t); chapterMark(c, t, 'III · The Inheritance', true);
+        } });
+      }
+      {
+        mark('carve', 1.4, { d: 3.2 });
+        add({ name: 'tablet', d: 7.4, passages: [], draw(c, t) { WORLD.tablet(c, t); } });
+      }
+      {
+        const t1 = passage({ mode: 'lower', at: 1.0, size: 52, text: 'He would recognise your morning: / more power than one mind can direct.', hold: 1.4 });
+        const t2 = passage({ mode: 'lower', at: t1.gone + 0.2, size: 52, text: 'Eight tabs open. Eight wings of a palace, / abandoned half-built, {for no one.}', hold: 2.6 });
+        const abandonAt = charAt(t2, 'abandoned');
+        mark('tabs', 0.6, { d: 4.4 }); mark('abandon', abandonAt);
+        add({ name: 'tabs', d: t2.gone + 0.4, passages: [t1, t2], draw(c, t) { WORLD.tabs(c, t, { abandonAt }); scrim(c, 'lower', 1, false); } });
+      }
+      // IV · THE INVERSION
+      {
+        const v1 = passage({ mode: 'top', at: 1.2, size: 50, text: 'For all of history, the limit was {labour.} / You could not build the bridge, or write the symphony, or run the numbers.', hold: 1.6 });
+        const v2 = passage({ mode: 'top', at: v1.gone + 0.2, size: 54, text: 'Now labour is endless, / and {attention} is the thing that runs out.', hold: 2.8 });
+        const pourAt = v2.at, outAt = charAt(v2, 'attention') + 0.4;
+        mark('chapter', 0); mark('pour', pourAt, { d: 4.5 }); mark('out', outAt, { d: 3.2 });
+        add({ name: 'balance', d: v2.gone + 0.4, passages: [v1, v2], draw(c, t) {
+          WORLD.balance(c, t, { pourAt, outAt });
+          scrim(c, 'top', 1, false); chapterMark(c, t, 'IV · The Inversion', false, 1046);
+        } });
+      }
+      {
+        const l1 = passage({ mode: 'top', at: 1.0, text: 'Your servants stand in a line past the castle walls / and over the horizon,', hold: 1.4 });
+        const l2 = passage({ mode: 'top', at: l1.gone + 0.2, size: 58, text: 'waiting for instructions / you do not have {time to give.}', hold: 2.4 });
+        const l3 = passage({ mode: 'centre', at: l2.gone + 0.9, size: 84, cps: 12, text: 'The limit is no longer what can be done. / The limit is {you.}', hold: 3.4 });
+        const d = l3.gone + 0.6;
+        mark('line', 0, { d: l2.gone }); mark('limit', l3.at);
+        add({ name: 'line', d, passages: [l1, l2, l3], draw(c, t) {
+          WORLD.line(c, t, { d: l2.gone + 1.5 }); scrim(c, 'top', 1 - seg(t, l2.out, l2.gone), false);
+          veilOn(c, t, l3, '246,240,229', 0.9);
+        } });
+      }
+      // V · THE GAP
+      {
+        const g1 = passage({ mode: 'side', at: 1.4, text: 'They bring you apple juice / when you wanted orange.', hold: 1.2 });
+        const g2 = passage({ mode: 'side', at: g1.gone + 0.2, text: 'They bring you something ninety percent right, which is worse than fifty, because it shows you {the shape of the gap.}', hold: 2.4 });
+        const g3 = passage({ mode: 'side', at: g2.gone + 0.2, text: 'To close it, you would have to say what you want. What *good* means to you. / Most of us have never had to.', hold: 2.4 });
+        const apple = [charAt(g1, 'apple') - 0.2, charAt(g1, 'apple') + 2.0], drain = [g1.out, g1.gone + 0.4];
+        const o50 = [charAt(g2, 'something') - 0.2, charAt(g2, 'something') + 1.2], o90 = [charAt(g2, 'ninety') - 0.2, charAt(g2, 'ninety') + 1.0];
+        const gapAt = charAt(g2, 'shape');
+        mark('chapter', 0); mark('pour', apple[0], { d: 2.2 }); mark('pour', o50[0], { d: 1.4 }); mark('pour', o90[0], { d: 1.2 }); mark('gap', gapAt);
+        add({ name: 'glass', d: g3.gone + 0.4, passages: [g1, g2, g3], draw(c, t) {
+          WORLD.glass(c, t, { apple, drain, o50, o90, gapAt }); scrim(c, 'side', 1, false); chapterMark(c, t, 'V · The Gap', false);
+        } });
+      }
+      {
+        const r1 = passage({ mode: 'lower', at: 2.6, size: 52, text: 'The mirror they hold up is accurate. / The reflection is bland because the face is bland.', hold: 1.8 });
+        const r2 = passage({ mode: 'centre', at: r1.gone + 0.8, night: true, size: 86, cps: 12, text: 'The failure is not the servant. / It is {the king.}', hold: 3.2 });
+        const faceAt = charAt(r1, 'reflection') - 0.4, d = r2.gone + 0.8;
+        mark('mirror', 0.2); mark('king', r2.at);
+        add({ name: 'mirror', d, passages: [r1, r2], draw(c, t) {
+          L.paper(c, 'dusk'); c.save(); c.translate(CX, 150); c.scale(0.8, 0.8); c.translate(-CX, -150); WORLD.mirror(c, t, { d, faceAt, noPaper: true }); c.restore(); veilOn(c, t, r2, '12,10,14', 0.86);
+        } });
+      }
+      // VI · THE LETTER
+      {
+        const h1 = passage({ mode: 'sheet', voice: 'hand', at: 2.0, cps: 13, text: 'Despite this, they pledge their undying loyalty and eternal labor to your cause.', hold: 1.8 });
+        const h2 = passage({ mode: 'sheet', voice: 'hand', at: h1.gone + 0.4, cps: 9, size: 104, y: 480, text: 'But you have {no cause.}', hold: 4.4 });
+        const lampOut = [h2.written + 0.8, h2.written + 3.4];
+        mark('chapter', 0); mark('write', h1.at, { d: h1.written - h1.at }); mark('write', h2.at, { d: h2.written - h2.at }); mark('silence', h2.written + 0.2, { d: 4.4 });
+        add({ name: 'letter', d: h2.gone + 1.2, passages: [h1, h2], rot: -1.4, draw(c, t) {
+          WORLD.letter(c, t, { lampOut, sheetAt: 0.6 }); chapterMark(c, t, 'VI · The Letter', true, 1046);
+        } });
+      }
+      {
+        const e1 = passage({ mode: 'centre', at: 2.2, night: true, size: 76, cps: 12, text: 'We live in an era with / the {saddest empires} / the world has ever known.', hold: 3.6 });
+        const d = e1.gone + 1.0;
+        mark('ruins', 0, { d }); mark('saddest', e1.at);
+        add({ name: 'ruins', d, passages: [e1], draw(c, t) { WORLD.ruins(c, t, { d }); veilOn(c, t, e1, '8,8,14', 0.5); } });
+      }
+      // VII · THE CROWN
+      let crownD, gleamAt;
+      {
+        const c1 = passage({ mode: 'lower', at: 2.2, size: 58, text: 'The crown is on the floor.', hold: 1.4 });
+        const c2 = passage({ mode: 'lower', at: c1.gone + 0.2, size: 58, text: 'It is heavy. / It was always going to be heavy.', hold: 2.6 });
+        gleamAt = charAt(c1, 'crown'); crownD = c2.gone + 0.4;
+        mark('chapter', 0); mark('dawn', 0, { d: crownD }); mark('gleam', gleamAt);
+        add({ name: 'crown', d: crownD, passages: [c1, c2], draw(c, t) {
+          WORLD.hallEnd(c, t, { d: crownD + 30, gleamAt }); scrim(c, 'lower', 1 - seg(t, c2.out, c2.gone), false); chapterMark(c, t, 'VII · The Crown', false);
+        } });
+      }
+      // EPILOGUE: out of the plate, "Pick it up.", the book closes, the candle goes out
+      {
+        const back = 4.2;
+        const pk = passage({ mode: 'bookCentre', at: back + 0.9, size: 96, cps: 8, text: '{Pick it up.}', hold: 3.6, sink: true });
+        const leafAt = pk.gone + 0.5, leafD = 2.2, coverAt = leafAt + leafD + 0.1, coverD = 2.6;
+        const sheenAt = coverAt + coverD + 0.2, outAt = sheenAt + 2.6, d = outAt + 3.6;
+        mark('zoom', 0, { d: back }); mark('pick', pk.at); mark('riffle', leafAt, { d: leafD }); mark('close', coverAt + coverD - 0.15); mark('snuff', outAt);
+        PASS.push({ scene: SC.length, P: pk });
+        add({ name: 'epilogue', d, passages: [], draw(c, t) {
+          const k = 1 - ease(seg(t, 0, back));
+          const z = ease(seg(t, leafAt, coverAt + coverD + 0.6));
+          const cam = k > 0 ? camInto(k) : { s: lerp(1, 0.62, z), cx: CX + 420 * z, cy: CY - 60 * z };
+          const turnTheta = PI * (1 - ease(seg(t, leafAt, leafAt + leafD)));
+          const coverTheta = PI * (1 - ease(seg(t, coverAt, coverAt + coverD)));
+          const lit = 1 - seg(t, outAt, outAt + 0.35);
+          bookScene(c, t, { cam, coverTheta, turnTheta, head: 'VII · The Crown', plateCaption: 'Plate VII.',
+            plate: (x) => WORLD.hallEnd(x, crownD + t, { d: crownD + 30, gleamAt: crownD + pk.written }),
+            candle: { x: 1905, y: 1010, h: 330, lit, spark: 0, always: true },
+            light: lerp(1, 0.08, ease(seg(t, outAt, outAt + 1.6))), fill: (1 - ease(seg(t, coverAt - 0.4, coverAt + coverD))) * (1 - k) + 0, white: k,
+            spill: 0.5 * (1 - k) * (1 - seg(t, leafAt, coverAt + 1)), dust: 0,
+            sheen: coverTheta === 0 ? seg(t, sheenAt, sheenAt + 2.2) : 0,
+            leftPage: (cc) => drawPassage(cc, pk, t) });
+          // smoke from the snuffed wick
+          const sm = seg(t, outAt, outAt + 3.2);
+          if (sm > 0 && sm < 1) {
+            const fx = CX + (1905 - cam.cx) * cam.s, fy = CY + (1010 - 330 * 1.02 - cam.cy) * cam.s;
+            c.save(); c.strokeStyle = `rgba(200,190,176,${0.35 * Math.sin(sm * PI)})`; c.lineWidth = 2 * cam.s; c.beginPath();
+            for (let i = 0; i <= 40; i++) { const u = i / 40, y = fy - u * 260 * cam.s * (0.4 + sm), x = fx + Math.sin(u * 7 + t * 2) * 14 * u * cam.s; i ? c.lineTo(x, y) : c.moveTo(x, y); }
+            c.stroke(); c.restore();
+          }
+        } });
+      }
     }
   } else {
   // PROLOGUE: the closed book
@@ -947,7 +1357,7 @@ window.defineStory = function (L) {
   /* ------------------------------------------------------------ timeline + render */
   const XF = 1.0;
   let acc = 0;
-  SC.forEach((s, i) => { const hard = i === 0 || ['morning', 'firstpage', 'epilogue', 'throne', 'bed'].includes(s.name); s.t0 = hard ? acc : acc - XF; s.t1 = s.t0 + s.d; acc = s.t1; s.xf = !hard; });
+  SC.forEach((s, i) => { const hard = i === 0 || ['morning', 'firstpage', 'epilogue', 'throne', 'bed', 'marcus'].includes(s.name); s.t0 = hard ? acc : acc - XF; s.t1 = s.t0 + s.d; acc = s.t1; s.xf = !hard; });
   const DURATION = acc;
   const out = document.getElementById('film').getContext('2d');
   const bufA = mk(), bufB = mk();
@@ -979,7 +1389,7 @@ window.defineStory = function (L) {
   }
   buildBook();
   const cues = () => ({
-    cut: L.variant === 'opening' ? 'opening' : 'story', duration: DURATION,
+    cut: L.variant, duration: DURATION,
     scenes: SC.map((s) => ({ name: s.name, t0: +s.t0.toFixed(3), d: s.d })),
     passages: PASS.map(({ scene, P }) => ({ t: +(SC[scene].t0 + P.at).toFixed(3), end: +(SC[scene].t0 + P.written).toFixed(3), voice: P.voice, gold: /\{/.test(P.text), scene })),
     marks: MARKS.map((m) => Object.assign({}, m, { t: +(SC[m.scene].t0 + m.t).toFixed(3) })),
