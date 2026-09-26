@@ -1417,7 +1417,7 @@
     await new Promise((res) => setTimeout(res, 1200)); // sprite mipmaps
     if (CUT === 'story' || CUT === 'opening' || CUT === 'complete') {
       BOOK = window.defineStory({ variant: CUT, W, H, PI, TAU, clamp, lerp, seg, ease, easeOut, easeIn, rng, mk, IMG, PAPER, GRAIN, Etch, hatch, ellipsePts, rect, candle, sprite, stars,
-        paper, drawLine, lineC, G, GS, gX, gY, gP, GLASS_R, GOLD_CROWN, FACADE, MIRROR, TABLET });
+        paper, drawLine, lineC, G, GS, gX, gY, gP, GLASS_R, GOLD_CROWN, FACADE, MIRROR, TABLET, pixelated, WALL, doorPath });
     }
     if (CUT === 'book') {
       G.cx = 345; const glassP = buildGlass(); G.cx = CX;

@@ -80,6 +80,21 @@ place (side, lower, top, centre with a veil, the letter's sheet, the book's left
 - Score: `tools/score5.py` (the opening score, continued). Two silences: after the bow, and after "no cause.". The theme resolves
   to D major only on "Pick it up.". Foley adds a chisel, the book closing and the snuffed flame.
 
+### Draft 3 of the film (2026-09-26)
+
+Samuel's notes on draft 2 are summarised at the top of `SCRIPT.md`, which is now the draft-3 script. What changed in the build:
+
+- The closed-book opening is back. The cover opens onto **The Prophecy** (left) facing the frontispiece crown on its column (right);
+  the camera leans in and the crown falls on "many shall let it fall".
+- **Matched transitions** (`through()` with `hold` and `smooth`): the great doorway is now a tall rounded portal with the phone's
+  proportions and corners, so the zoom into it lands exactly on the phone screen; the bedroom window is Marcus's window (`WIN`),
+  under the same moon; the portrait and the mirror share one oval frame; the Test's door lands on the hall's tall window.
+- Candlelight re-graded warm (the light map had pushed the pages toward lime).
+- New scenes: the portrait (V), the pledge in the night hall (VI), the Test with its hierarchy and walls (VII).
+- The crown rests on the floor at a measured pose (`REST`), and the final shot keeps the hall: the court fades, the hall blurs, the crown stays sharp.
+- The book closes in one motion (no page turning backwards), after "The rest of this book is blank."
+- Score: `tools/score6.py`.
+
 ### Draft 2 of the film (2026-09-26)
 
 Samuel's notes on the complete cut: scenes should open *through* each other; the crown on its column should be one of the first

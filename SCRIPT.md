@@ -1,183 +1,117 @@
-# The Saddest Empires — film script (draft 2)
+# The Saddest Empires — film script (draft 3)
 
-_Draft 2, 2026-09-26: the crown is the first thing you see and the last; every scene opens into the next; the limits passage is back.
-Draft 1, 2026-09-26. The essay rewritten for the film. Nothing here replaces the essay. It is the same argument, told as a story in which the
-viewer is the ruler._
+_Draft 3, 2026-09-26. Samuel's notes on draft 2: keep the book opening, and let it open on a prophecy facing the crown on its column;
+warm candlelight; "imagine that you find yourself" on the throne; transitions that match exactly (the doorway becomes the phone, the bedroom
+window becomes Marcus's window); legible tabs; a natural crowd on the scale and a reason to be at the gate; the glass replaced by something
+people understand; no unexplained letter; a reason for "the saddest empires"; a scene of the test before the crown; the crown really on the
+floor; "Pick it up." in the hall itself; the book closes, and a hint of how it ends._
 
-## The idea the film has to land
+The film is `animated/film.html?cut=complete`. Narration is on-screen text; *[brackets]* are picture and sound.
 
-You have been handed the largest empire in history: servants who have read everything and can build anything, and who wait on your word.
-You didn't earn it, and you are not dressed. The limit is no longer what can be done. **The limit is you:** what you want, how clearly
-you can say it, whether you have a cause. Most of us don't. So these are the saddest empires the world has ever known. The crown is on
-the floor. **Pick it up.**
+## Prologue — The Book
 
-## How the story is told
+*[Black. A match. A candle lights a closed book: a gold crown, a gilt title.]*
 
-- **Second person, present tense.** The viewer is not watching a king; the viewer *is* the king. "You" from the first line.
-- **A bookend.** It opens on a throne hall full of waiting servants and closes on the same hall, the throne empty and the crown on the floor.
-  Everything in between explains how the throne got empty.
-- **Two worlds cut against each other:** the ancient empire (engraved, gold, vast) and your actual morning (a dark bedroom, a phone).
-  The film keeps cutting between them until they are the same place.
-- **The book frames it.** A book on a desk opens the film and closes it. Inside the book, the narration moves around the frame.
-- **The crown is the bookend.** The first image is a crown on a column. It falls. The last image is the same crown, on the
-  floor of your own throne hall, and the only instruction left: pick it up.
-- **Every scene opens into the next.** No cuts between worlds: the camera travels *through* something in one scene and comes
-  out of its twin in the next (the great doors become the phone's glow; the palace of light becomes Marcus's window; his scroll
-  becomes the carved tablet; a ruined wing's column becomes the post of the balance; the servants on the scale become the Line;
-  the rim of the glass becomes the mirror; the ruined temple becomes the empty throne).
-- **Chapters** are named in the book's running heads: *The Throne · The Inheritance · The Inversion · The Gap · The Letter · The Crown.*
+> *This is the story of an empire. / The greatest the world has ever known.*
 
-Narration below is the text on screen. *[Brackets]* are picture and sound. Timings are approximate.
+*[The book opens. Left: a page headed THE PROPHECY. Right: the frontispiece, a crown on a column.]*
 
----
+> *In the last age, every one of you shall be given a kingdom, and servants past counting, and a crown.
+> And the crown shall be heavy, and many shall let it fall.*
 
-## PROLOGUE — The Book  (0:00–0:25)
-
-*[Black. Silence. A match strikes. A candle catches, and its light rakes across an engraving, very close: a gold crown resting on
-the capital of a column.]*
-
-> *This is the story of an empire.*
-
-> *The greatest the world has ever known.*
-
-*[The crown tips, falls, and rings on the stone floor. The music stops. The words sink into the paper, and the camera pulls back:
-the engraving is the frontispiece of a book lying open by the candle, facing its title page.]*
-
-*[The page turns. On the right, a plate: a throne hall, rows of servants to the horizon. On the left page, in ink:]*
+*[The camera leans in. The crown tips and falls, ringing on the stone. Silence. The page turns: a plate of the throne hall.]*
 
 > **It begins with you.**
 
-*[The ink sinks into the paper. The camera travels into the plate.]*
+## I · The Throne
 
-## I — The Throne  (0:25–0:50)
+> Imagine that you find yourself sitting on a throne. / Your servants stand shoulder to shoulder, as far as the eye can see. /
+> They have read everything. They can build anything. They do not tire, and they do not resent. / They are waiting for your **instruction.**
 
-*[Inside the plate. We look out from the throne: carved gold armrests frame the bottom of the frame. Columns recede on both sides. Servants
-stand in rows down the hall, through the great doors, and on to the horizon.]*
+*[They bow. The camera flies down the aisle into the great doorway, tall with softened corners, until it fills the frame, and it becomes…]*
 
-> You now sit on the throne.
+## II · The Bed
 
-> Your servants stand shoulder to shoulder, as far as the eye can see.
+*[…the screen of a phone, lying on a bed in the dark. The camera pulls back.]*
 
-> They have read everything. They can build anything. They do not tire, and they do not resent.
+> Of course, you are not in a palace. / You are in bed. You have not brushed your teeth. /
+> You speak a few sentences into the dark, and somewhere, in a place that is not a place, something begins to build for you. /
+> **You did not earn this. You are not even dressed.**
 
-> They are waiting for your instruction.
+*[The camera flies into the arched window with the moon in it, and comes out of the same window, two thousand years earlier.]*
 
-*[At "instruction", the servants bow: one wave, front to back, all the way to the horizon. The music swells. The camera flies down the aisle
-into the light of the great doors, and the light narrows into…]*
+## III · The Inheritance
 
-## II — The Bed  (0:50–1:10)
+> The closest thing to the life you've been given is the life of an emperor. / Marcus Aurelius ruled a third of the world.
+> Every night he wrote himself the same question:
 
-*[…the glow of a phone on a rumpled bed, in a dark bedroom. The music has stopped.]*
+*[Into his scroll; out of the stone:]* **ASK YOURSELF AT EVERY MOMENT: IS THIS NECESSARY?**
 
-> Of course, you are not in a palace.
+> He would recognise your morning: more power than one mind can direct. / Eight tabs open. Eight wings of a palace, abandoned half-built, for no one.
 
-> You are in bed. You have not brushed your teeth.
+## IV · The Inversion
 
-> You speak a few sentences into the dark,
-
-*[Letters leave the phone and rise. Above the bed, in lines of light, a palace begins to draw itself.]*
-
-> and somewhere, in a place that is not a place, something begins to build for you.
-
-> **You did not earn this. You are not dressed.**
-
-## III — The Inheritance  (1:10–1:40)
-
-*[An engraving of Marcus Aurelius, writing by lamplight.]*
-
-> The closest thing to the life you've been given is the life of an emperor.
-
-> Marcus Aurelius ruled a third of the world. Every night he wrote himself the same question:
-
-*[It is chiselled into stone:]* **Is this necessary?**
-
-> He would recognise your morning: more power than one mind can direct.
-
-*[Browser tabs open along the top of the frame. Under each, a wing of a palace begins, stops half-built, and falls to ruin.]*
-
-> Eight tabs open. Eight wings of a palace, abandoned half-built, for no one.
-
-## IV — The Inversion  (1:40–2:10)
-
-*[A balance scale. On one side, a single servant; on the other, many lit candles.]*
-
-> For all of history, the limit was labour. You could not build the bridge, or write the symphony, or run the numbers.
-
-*[Servants pour onto the scale until it tips; the candles go out one by one.]*
-
+> For all of history, the limit was labour. You could not build the bridge, or write the symphony, or run the numbers. /
 > Now labour is endless, and attention is the thing that runs out.
 
-*[The Line: from one servant at the gate to thousands, over the horizon.]*
+*[Servants step onto the scale in ranks; the attention candles go out. Into one servant on the scale; out of one servant at the gate.]*
 
-> Your servants stand in a line past the castle walls and over the horizon, waiting for instructions you do not have time to give.
+> And every one of them is waiting at the gate of your palace. / The line runs past the castle walls and over the horizon, /
+> waiting for instructions you do not have time to give. / **The limit is no longer what can be done. The limit is you.**
 
-> **The limit is no longer what can be done. The limit is you.**
+## V · The Gap
 
-## V — The Gap  (2:10–2:45)
+*[An oval portrait on an easel, the painter beside it.]*
 
-*[A glass on a tray.]*
+> You ask your court painter for a portrait. Not a likeness. *You.* / It comes back competent, correct, and nothing like you. /
+> You send it back. It returns closer: ninety percent right, which is worse than fifty, because now you can see **the shape of the gap.**
+> *[a gold halo: the tenth the painter missed]* / So you blame the painter. They do not listen. They do not *understand* you. /
+> But maybe the gap is not in them. It is in the instruction you never gave, the taste you never formed, the craft you never learned.
 
-> They bring you apple juice when you wanted orange.
+*[Into the painting; out of the same frame, now holding a mirror.]*
 
-> They bring you something ninety percent right, which is worse than fifty, because it shows you *the shape of the gap.*
-
-> To close it, you would have to say what you want. What *good* means to you. Most of us have never had to.
-
-*[A servant holds up a mirror. In it, a face with no features.]*
-
-> The mirror they hold up is accurate. The reflection is bland because the face is bland.
-
+> So they hold up a mirror instead. It is accurate. The reflection is bland because the face is bland. /
 > **The failure is not the servant. It is the king.**
 
-## VI — The Letter  (2:45–3:15)
+## VI · The Pledge
 
-*[Night. A lamplit sheet of paper. A friend's handwriting.]*
+*[The throne hall at night, in moonlight. The court kneels.]*
 
-> *Despite this, they pledge their undying loyalty and eternal labor to your cause.*
+> And still your servants kneel, and pledge their undying loyalty and eternal labour to your cause. / **But you have no cause.**
 
-> *But you have* **no cause.**
+*[The moonlight goes out. Silence. Through the doors, into the ruins.]*
 
-*[The lamp goes out. Silence.]*
+> You have the most numerous, most talented subjects of any sovereign in history. /
+> And yet your workforce is idle. And when it is not, all you do is remodel the castle walls. /
+> We live in an era with **the saddest empires** the world has ever known.
 
-*[The ruins, at night.]*
+## VII · The Test
 
-> We live in an era with the saddest empires the world has ever known.
+*[You, crowned, at the top of a hierarchy; each level below loses resolution. Walls go up across the lines of command: CLARITY,
+CONTEXT, TOOLS, STRUCTURE, TIME.]*
 
-## VII — The Crown  (3:15–3:40)
+> So you try. You delegate, and delegate again. At every level you gain leverage and lose resolution. /
+> You hit the walls: of context, of tools, of structure, of time, and of your own clarity. /
+> Until managing the managers costs more than doing the work yourself. /
+> **Good. If you never hit these limits, you never know where the true limit is.** *[the walls turn gold]*
 
-*[The throne hall from the opening, at first light, seen from the aisle. The throne is empty. At the foot of the dais stands the column
-from the first image, and the crown lies on the floor beside it. The servants are still there, still waiting.]*
-
-> The crown is on the floor.
-
-> It is heavy. It was always going to be heavy.
-
-*[The camera walks up the aisle toward the crown. The light grows.]*
-
-> You will hit the walls: of context, of tools, of time, of your own clarity.
-
-> Good. If you never hit these limits, you never know where the true limit is.
+*[One wall, with a door in it. It opens onto light.]*
 
 > **The bottleneck is the curriculum. The overwhelm is the syllabus.**
 
+## VIII · The Crown
+
+*[Through the door, into the throne hall at first light, up the aisle. The throne is empty; the column from the frontispiece stands at the
+foot of the dais, and the crown lies on the carpet.]*
+
+> The crown is on the floor. / It is heavy. It was always going to be heavy. /
 > You are not failing to rule. You are learning to, in real time, because no one in history has ever had to before.
 
-*[The crown, close: the frontispiece again, now in first light. The camera pulls back out of the plate into the book. On the left page, in gold:]*
+*[The court fades away; the hall softens; only the crown stays in focus.]*
 
 > **Pick it up.**
 
-*[The book closes. The title on the cover catches the candle. The candle goes out.]*
+## Epilogue
 
----
-
-## Notes
-
-- **Word budget.** About 420 words on screen for about 3½ minutes: roughly the reading pace of the current cut.
-- **What's kept verbatim from the essay:** the morning in bed, "is this necessary?", the eighth tab, Simon's point (paraphrased; the full
-  quote can return if you want it), the Line, apple/orange and the shape of the gap, the mirror, "the failure is not the servant", the friend's
-  letter, "saddest empires", "the crown is on the floor… pick it up."
-- **What's new:** the throne-room opening and bookend, the cut from throne to bed, "It begins with you", and
-  "The limit is no longer what can be done. The limit is you." (the essay's inversion, stated plainly once).
-- **Restored in draft 2:** the bottleneck passage ("if you never hit these limits, you never know where the true limit is"; "the bottleneck is
-  the curriculum"), as the turn of VII, just before "Pick it up."
-- **What's cut:** "everyone is a king now".
+*[The camera pulls back out of the plate into the book. On the left page:]* *The rest of this book is blank.*
+*[The book closes. The gilt title catches the candle. The candle goes out.]*
