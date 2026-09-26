@@ -92,8 +92,12 @@ for ch in PROGRAM:
 pad(sc[0] + 0.1, sc[1] + 9 - sc[0], ["D3", "A3", "F4"], 42)
 swell(STR, sc[0], sc[0] + 3, 30, 100)
 motif(sc[0] + 0.6)
-pad(sc[1] + 9, 6, ["Bb2", "F3", "D4"], 42)
-pad(sc[1] + 15, sc[2] + 1 - (sc[1] + 15), ["G2", "D3", "Bb3"], 40)
+# the rest of the morning moves slowly through the relative keys, however long the scene runs
+mseq = [["Bb2", "F3", "D4"], ["F2", "C3", "A3"], ["G2", "D3", "Bb3"], ["Bb2", "D3", "F3"], ["A2", "E3", "C#4"]]
+m0, m1 = sc[1] + 9, sc[2] + 1
+step_m = (m1 - m0) / len(mseq)
+for k, names in enumerate(mseq):
+    pad(m0 + k * step_m, step_m, names, 40)
 # II · card + Simon
 pad(sc[2] + 0.2, sc[3] - sc[2] + 1, ["Eb3", "Bb3", "G4"], 40)
 motif(sc[2] + 0.6, vel=44)
@@ -130,9 +134,11 @@ note(BASS, t0 + seg, d - seg, p("D2"), 40)
 pad(sc[5] + 0.2, sc[6] - sc[5] + 1, ["F2", "C3", "A3"], 38)
 note(PIANO, sc[5] + 0.6, 2.5, p("A4"), 44)
 g0 = sc[6]
-pad(g0 + 0.3, 7, ["D3", "F3", "A3"], 36)
-pad(g0 + 7.3, 6, ["Bb2", "D3", "F3"], 36)
 gap = M("gap")[0]["t"]
+gseq = [["D3", "F3", "A3"], ["Bb2", "D3", "F3"], ["F2", "A2", "C3", "F3"], ["C3", "E3", "G3"]]
+gstep = (gap - 3.6 - (g0 + 0.3)) / len(gseq)
+for k, names in enumerate(gseq):
+    pad(g0 + 0.3 + k * gstep, gstep, names, 36)
 pad(gap - 3.6, 3.6, ["G2", "Bb2", "D3", "G3"], 38)
 for k, n in enumerate(["D4", "E4", "F4", "G4", "A4", "Bb4"]):
     note(PIANO, gap - 3.3 + k * 0.52, 0.7, p(n), 40 + k * 3)

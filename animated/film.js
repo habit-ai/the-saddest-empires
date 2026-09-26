@@ -1359,7 +1359,9 @@
   S.forEach((s, i) => { s.t0 = i ? acc - XF : 0; s.t1 = s.t0 + s.d; acc = s.t1; });
   const DURATION = S[S.length - 1].t1;
 
+  let BOOK = null;
   function render(T) {
+    if (BOOK) return BOOK.render(T);
     const active = S.filter((s) => T >= s.t0 && T < s.t1 + 1e-6).slice(-2);
     out.globalCompositeOperation = 'source-over'; out.globalAlpha = 1;
     out.fillStyle = '#000'; out.fillRect(0, 0, W, H);
@@ -1413,6 +1415,13 @@
     lineB = new LineScene(document.getElementById('line-b'), { gate: false, count: 3200, firstX: -3.5, z0: 9 });
     await new Promise((res) => { const chk = () => (lineA.servants && document.readyState === 'complete' ? res() : setTimeout(chk, 50)); chk(); });
     await new Promise((res) => setTimeout(res, 1200)); // sprite mipmaps
+    if (CUT === 'book') {
+      G.cx = 345; const glassP = buildGlass(); G.cx = CX;
+      const lineP = new LineScene(document.getElementById('line-p'), { horizon: 0.36, z0: 8, firstX: -0.4 });
+      await new Promise((res) => setTimeout(res, 300));
+      BOOK = window.defineBook({ W, H, CX, CY, PI, TAU, clamp, lerp, seg, ease, easeOut, easeIn, rng, mk, IMG, PAPER, GRAIN, Etch, hatch, ellipsePts, rect, candle, sprite, stars,
+        G, GS, gX, gY, gP, glassP, GOLD_CROWN, FACADE, lineP, INK, MOON });
+    }
     render(0);
   })();
 
@@ -1432,13 +1441,13 @@
     pick: +(S[S.length - 2].t0 + 16).toFixed(2),
   });
 
-  window.FILM = { ready, render, duration: () => DURATION, cues };
+  window.FILM = { ready, render, duration: () => (BOOK ? BOOK.duration : DURATION), cues: () => (BOOK ? BOOK.cues() : cues()) };
 
   // preview: play in real time when opened in a browser (append ?t=SECONDS to start elsewhere)
   if (!/record/.test(location.search)) {
     ready.then(() => {
       const start = +(new URLSearchParams(location.search).get('t') || 0), t0 = performance.now();
-      const loop = (now) => { const T = start + (now - t0) / 1000; render(Math.min(T, DURATION)); if (T < DURATION) requestAnimationFrame(loop); };
+      const loop = (now) => { const T = start + (now - t0) / 1000; render(Math.min(T, window.FILM.duration())); if (T < window.FILM.duration()) requestAnimationFrame(loop); };
       requestAnimationFrame(loop);
     });
   }
