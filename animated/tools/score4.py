@@ -218,8 +218,7 @@ def thud(t, gain, ring=True):
 
 paper_sound(M("open")[0]["t"], 1.6, 0.05)          # the cover lifting
 rf = M("riffle")[0]
-for k in range(6):
-    paper_sound(rf["t"] + k * 0.2 + 0.3, 0.35, 0.03, pan=0.3 - k * 0.1)   # the pages riffling
+paper_sound(rf["t"] + 0.2, 1.3, 0.045, pan=0.2)                        # one page turning
 # the match: a scrape and a flare
 L_ = int(0.6 * SR); x = rng.standard_normal(L_); x = x - lowpass(x, 3)
 put(x * env(L_, 0.01, 0.4) * np.exp(-np.arange(L_) / SR * 5), M("strike")[0]["t"] - 0.05, 0.05, 0.4)
