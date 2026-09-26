@@ -80,6 +80,28 @@ place (side, lower, top, centre with a veil, the letter's sheet, the book's left
 - Score: `tools/score5.py` (the opening score, continued). Two silences: after the bow, and after "no cause.". The theme resolves
   to D major only on "Pick it up.". Foley adds a chisel, the book closing and the snuffed flame.
 
+### Draft 2 of the film (2026-09-26)
+
+Samuel's notes on the complete cut: scenes should open *through* each other; the crown on its column should be one of the first
+things you see and the last; the essay's bottleneck passage was missing; many scenes, the palace above all, needed a more careful design.
+
+- **The crown bookends the film.** It opens on a candlelit close-up of the crown on its column. The crown falls; the words sink into the paper; the camera pulls back to reveal the
+  frontispiece of a book facing its title page. It ends on the same crown on the floor of your throne hall, close, in first light: "Pick it up."
+  Then the book closes on the same spread it opened on.
+- **Every scene opens into the next** (`through()` in `story.js`): the throne hall flies into the light of its doors, which becomes the phone's
+  glow; the palace of light becomes Marcus's window; his scroll becomes the tablet; a half-built wing's column becomes the post of the balance;
+  the servants on the scale become the Line; the rim of the glass becomes the mirror; the ruined temple becomes the empty throne; the crown on
+  the hall floor becomes the close-up.
+- **VII now carries the limits passage**, just before "Pick it up.", while the camera walks up the aisle to the crown:
+  "Good. If you never hit these limits, you never know where the true limit is." / "The bottleneck is the curriculum. The overwhelm is the syllabus."
+- **One palace, two views** (`drawHall`): arcades on columns with capitals, a coffered barrel vault with ribs, clerestory windows throwing
+  shafts of light, banners of the house, a polished marble floor, great arched doors (from the throne) or a canopied throne under a tall window
+  (up the aisle). The courtiers now have paper silhouettes, so they stand in front of each other instead of overlapping as line drawings.
+- Redesigned: Marcus's study (ashlar wall, arched night window, a case of scrolls, a turned-leg desk, inkwell), the mirror (a cheval stand,
+  servants on the floor beside it, text beside the picture), the glass (a clothed table and the servant who brought it), the tabs (scaffolding on the half-built wings).
+- Score: `tools/score5.py` updated: the music box stops when the crown lands (a ring on stone), the court's chord rises into the light of the
+  doors and cuts, the walk up the aisle climbs to the dominant on "the curriculum", and D major arrives on "Pick it up."
+
 ## Where we start
 
 - Live today: `habit-ai.github.io/the-saddest-empires/`, one static `index.html` (about 2,300 words), parchment palette,

@@ -99,12 +99,15 @@ for ch in PROGRAM:
     cc(ch, 0, 7, {PIANO: 100, STR: 90, CELLO: 74, CEL: 82, HARP: 88, BASS: 84, BOX: 70, HORN: 78, TIMP: 84, CHOIR: 64}[ch]); cc(ch, 0, 11, 110)
 
 m1 = lambda name: M(name)[0]["t"]
-# PROLOGUE: silence, a match, then a low string breath and the theme on a music box
+# PROLOGUE: silence, a match, a low string breath and the theme on a music box; the crown falls and the music stops
 strike, title, op = m1("strike"), m1("title"), m1("open")
-pad(strike + 0.4, op - strike - 0.4, ["D2", "A2", "D3"], 40)
+tip, land = m1("tip"), m1("land")
+pad(strike + 0.4, land - strike - 0.2, ["D2", "A2", "D3"], 40)
+for k, n in enumerate(["A4", "Ab4", "G4"]):                 # the crown rocks: three unsteady notes
+    note(CEL, tip + k * 0.4, 0.8, p(n), 40)
 swell(STR, strike, strike + 5, 10, 90)
 motif(title + 0.4, ch=BOX, vel=62, step=0.62, octave=1)
-motif(title + 4.6, ch=BOX, vel=56, step=0.62, octave=1)
+motif(title + 4.0, ch=BOX, vel=56, step=0.62, octave=1)
 arpeggio(op, ["D3", "A3", "D4", "F4", "A4", "D5", "F5", "A5", "D6"], gap=0.1, vel=46)
 pad(op, m1("begins") - op, ["Bb2", "F3", "D4", "F4"], 40)
 swell(STR, op, op + 2.4, 60, 115)
@@ -137,6 +140,9 @@ pad(bow, cut - bow - 0.3, ["D2", "A2", "D3", "F#3", "A3", "D4"], 54)   # the cou
 for n in ["D3", "F#3", "A3", "D4"]:
     note(HORN, bow, cut - bow - 0.3, p(n), 58); note(CHOIR, bow, cut - bow - 0.3, p(n), 46)
 note(TIMP, bow, 1.5, p("D2"), 80)
+fly = M("fly")[0]                                          # down the aisle into the light: everything rises, then stops dead
+swell(STR, fly["t"], cut, 100, 127); swell(CHOIR, fly["t"], cut, 90, 127)
+arpeggio(fly["t"] + 0.4, ["D5", "F#5", "A5", "D6", "F#6", "A6"], ch=CEL, gap=0.3, vel=44)
 # THE BED: a small room, a small sound
 bed, dark, earn = m1("bed"), m1("dark"), m1("earn")
 pad(bed + 1.2, dark - bed - 1.2, ["D3", "A3"], 36)
@@ -241,20 +247,33 @@ sad = M("saddest")[0]["t"]
 for n in ["D3", "F3", "A3"]:
     note(CHOIR, sad + 1.0, 7, p(n), 38)
 motif(sad + 1.4, ch=PIANO, vel=44, step=0.9)
-# VII · THE CROWN: first light; the strings rise toward the crown
+# VII · THE CROWN: first light; then the walk up the aisle, rising all the way to "the curriculum"
 a, gl = t0("crown"), M("gleam")[0]["t"]
+wk, cur = M("walk")[0], M("curriculum")[0]["t"]
 pad(a, gl - a, ["F2", "C3", "A3"], 36)
 swell(STR, a, gl, 60, 100)
 arpeggio(gl, ["D4", "F4", "A4", "D5", "F5", "A5"], ch=HARP, gap=0.14, vel=40)
-pads(gl, t1("crown"), [["Bb2", "F3", "D4", "F4"], ["G2", "D3", "Bb3", "D4"], ["A2", "E3", "C#4", "A4"]], 42)
-for n in ["D3", "A3"]:
-    note(HORN, gl + 0.4, t1("crown") - gl, p(n), 50)
-# EPILOGUE: out into the book; the theme resolves on "Pick it up."; the book closes; the candle goes out
-zo = M("zoom")[-1]
-arpeggio(zo["t"] + 0.3, ["A5", "F5", "D5", "A4", "F4", "D4"], gap=0.16, vel=34)
+pad(gl, wk["t"] - gl, ["Bb2", "F3", "D4", "F4"], 40)
+seq = [["G2", "D3", "Bb3"], ["Bb2", "F3", "D4"], ["C3", "G3", "E4"]]
+st = (cur - wk["t"]) / len(seq)
+for k, names in enumerate(seq):
+    pad(wk["t"] + k * st, st, names, 40 + k * 4)
+    for b_ in np.arange(0, st, 0.62):
+        note(CELLO, wk["t"] + k * st + b_, 0.55, p(names[0]) - 12, 42 + k * 6)
+swell(STR, wk["t"], cur, 70, 118)
+pad(cur, 8, ["A1", "A2", "E3", "A3", "C#4", "E4"], 50)                  # "the curriculum": the dominant, held, with the court's voices
+for n in ["E3", "A3", "C#4"]:
+    note(CHOIR, cur, 8, p(n), 48)
+motif(cur + 0.3, ch=HORN, vel=64, step=0.9)
+note(TIMP, cur, 2, p("A1"), 64)
+pads(cur + 8, t1("crown"), [["Bb2", "F3", "D4"], ["G2", "D3", "Bb3", "D4"], ["A2", "E3", "C#4", "A4"]], 44)
+swell(STR, t1("crown") - 5, t1("crown"), 100, 124)
+# EPILOGUE: the crown, close; the theme resolves on "Pick it up."; back into the book; it closes; the candle goes out
 pick = M("pick")[0]["t"]
-pad(zo["t"], pick - zo["t"], ["G2", "D3", "Bb3", "D4"], 40)
+pad(t0("epilogue"), pick - t0("epilogue"), ["A2", "E3", "C#4", "A4"], 42)
 pad(pick, DUR - pick, ["D2", "A2", "D3", "F#3", "A3", "D4"], 44)
+zo = M("open")[-1]
+arpeggio(zo["t"] + 0.3, ["A5", "F#5", "D5", "A4", "F#4", "D4"], gap=0.16, vel=34)
 for n in ["D3", "F#3", "A3", "D4"]:
     note(CHOIR, pick + 0.2, 9, p(n), 40)
 motif(pick + 0.4, major=True, vel=60, step=0.8)
@@ -340,7 +359,7 @@ def thud(t, gain, ring=True):
     put(body * 0.8 + (r * 0.25 if ring else 0), t, gain)
 
 
-paper_sound(M("open")[0]["t"], 1.6, 0.05)          # the cover lifting
+thud(M("land")[0]["t"], 0.26, ring=True)          # the crown hits the stone floor
 for rf in M("riffle"):
     paper_sound(rf["t"] + 0.2, 1.3, 0.045, pan=0.2)                        # one page turning
 # the match: a scrape and a flare

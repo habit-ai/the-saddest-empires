@@ -1,6 +1,7 @@
-# The Saddest Empires — film script (draft 1)
+# The Saddest Empires — film script (draft 2)
 
-_2026-09-26. The essay rewritten for the film. Nothing here replaces the essay. It is the same argument, told as a story in which the
+_Draft 2, 2026-09-26: the crown is the first thing you see and the last; every scene opens into the next; the limits passage is back.
+Draft 1, 2026-09-26. The essay rewritten for the film. Nothing here replaces the essay. It is the same argument, told as a story in which the
 viewer is the ruler._
 
 ## The idea the film has to land
@@ -18,6 +19,12 @@ the floor. **Pick it up.**
 - **Two worlds cut against each other:** the ancient empire (engraved, gold, vast) and your actual morning (a dark bedroom, a phone).
   The film keeps cutting between them until they are the same place.
 - **The book frames it.** A book on a desk opens the film and closes it. Inside the book, the narration moves around the frame.
+- **The crown is the bookend.** The first image is a crown on a column. It falls. The last image is the same crown, on the
+  floor of your own throne hall, and the only instruction left: pick it up.
+- **Every scene opens into the next.** No cuts between worlds: the camera travels *through* something in one scene and comes
+  out of its twin in the next (the great doors become the phone's glow; the palace of light becomes Marcus's window; his scroll
+  becomes the carved tablet; a ruined wing's column becomes the post of the balance; the servants on the scale become the Line;
+  the rim of the glass becomes the mirror; the ruined temple becomes the empty throne).
 - **Chapters** are named in the book's running heads: *The Throne · The Inheritance · The Inversion · The Gap · The Letter · The Crown.*
 
 Narration below is the text on screen. *[Brackets]* are picture and sound. Timings are approximate.
@@ -26,17 +33,17 @@ Narration below is the text on screen. *[Brackets]* are picture and sound. Timin
 
 ## PROLOGUE — The Book  (0:00–0:25)
 
-*[Black. Silence. A match strikes. A candle catches, and its light spreads across a desk to a closed leather book: a gold crown, a gilt title.
-The light reaches the gilt and it glints.]*
+*[Black. Silence. A match strikes. A candle catches, and its light rakes across an engraving, very close: a gold crown resting on
+the capital of a column.]*
 
 > *This is the story of an empire.*
 
 > *The greatest the world has ever known.*
 
-*[The book opens by itself. Warm gold light spills from between the pages. The pages riffle and settle on a spread: the left page blank,
-the right page a plate that engraves itself: a throne hall, rows of servants to the horizon.]*
+*[The crown tips, falls, and rings on the stone floor. The music stops. The words sink into the paper, and the camera pulls back:
+the engraving is the frontispiece of a book lying open by the candle, facing its title page.]*
 
-*[On the left page, in ink:]*
+*[The page turns. On the right, a plate: a throne hall, rows of servants to the horizon. On the left page, in ink:]*
 
 > **It begins with you.**
 
@@ -55,11 +62,12 @@ stand in rows down the hall, through the great doors, and on to the horizon.]*
 
 > They are waiting for your instruction.
 
-*[At "instruction", the servants bow: one wave, front to back, all the way to the horizon. The music swells, then stops dead.]*
+*[At "instruction", the servants bow: one wave, front to back, all the way to the horizon. The music swells. The camera flies down the aisle
+into the light of the great doors, and the light narrows into…]*
 
 ## II — The Bed  (0:50–1:10)
 
-*[Hard cut. A dark bedroom. A phone glows on a rumpled bed.]*
+*[…the glow of a phone on a rumpled bed, in a dark bedroom. The music has stopped.]*
 
 > Of course, you are not in a palace.
 
@@ -137,14 +145,24 @@ stand in rows down the hall, through the great doors, and on to the horizon.]*
 
 ## VII — The Crown  (3:15–3:40)
 
-*[The throne hall from the opening, at first light. The throne is empty. The crown lies on the floor at the foot of the dais. The servants are
-still there, still waiting.]*
+*[The throne hall from the opening, at first light, seen from the aisle. The throne is empty. At the foot of the dais stands the column
+from the first image, and the crown lies on the floor beside it. The servants are still there, still waiting.]*
 
 > The crown is on the floor.
 
 > It is heavy. It was always going to be heavy.
 
-*[The camera pulls back out of the plate into the book. On the left page, in gold:]*
+*[The camera walks up the aisle toward the crown. The light grows.]*
+
+> You will hit the walls: of context, of tools, of time, of your own clarity.
+
+> Good. If you never hit these limits, you never know where the true limit is.
+
+> **The bottleneck is the curriculum. The overwhelm is the syllabus.**
+
+> You are not failing to rule. You are learning to, in real time, because no one in history has ever had to before.
+
+*[The crown, close: the frontispiece again, now in first light. The camera pulls back out of the plate into the book. On the left page, in gold:]*
 
 > **Pick it up.**
 
@@ -160,4 +178,6 @@ still there, still waiting.]*
   letter, "saddest empires", "the crown is on the floor… pick it up."
 - **What's new:** the throne-room opening and bookend, the cut from throne to bed, "It begins with you", and
   "The limit is no longer what can be done. The limit is you." (the essay's inversion, stated plainly once).
-- **What's cut:** the bandwidth/bottleneck section (curriculum, syllabus) and "everyone is a king now". Both could come back as a short beat in IV.
+- **Restored in draft 2:** the bottleneck passage ("if you never hit these limits, you never know where the true limit is"; "the bottleneck is
+  the curriculum"), as the turn of VII, just before "Pick it up."
+- **What's cut:** "everyone is a king now".

@@ -198,6 +198,15 @@ window.defineStory = function (L) {
   WORLD.glass = (c, t, o) => {
     L.paper(c, 'day');
     const { G, GS, gX, gY, gP } = L;
+    // a servant behind the table, who has just set the tray down
+    { const img = IMG.s3, h = 900, w = (img.width / img.height) * h; c.save(); c.translate(1790, 1020); c.scale(-1, 1); c.globalAlpha = 0.9; c.drawImage(spriteAt(2, 480).fill, -w / 2, -h, w, h); c.drawImage(img, -w / 2, -h, w, h); c.restore(); c.globalAlpha = 1; }
+    // the table: a linen cloth over it, falling in folds at the front
+    const top = [[930, 760], [W + 40, 760], [W + 40, 900], [880, 900]];
+    c.fillStyle = 'rgb(246,241,231)'; c.beginPath(); top.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
+    const et = new Etch().add([...top.slice(0, 1), top[3], [880, 1010]], 1.6).add([[930, 760], [W + 40, 760]], 1.3).add([[880, 900], [W + 40, 900]], 1.6);
+    for (let k = 0; k < 16; k++) { const x = 900 + k * 66; et.add([[x, 902], [x + Math.sin(k) * 6, 1080]], 0.9, 0.55); }
+    et.addAll(hatch([[880, 902], [W + 40, 902], [W + 40, H], [880, H]], 90, 6, 1.2, 5), 0.5, 0.3);
+    et.draw(c, 1, INK);
     G.cx = 1390;
     L.GLASS_R.draw(c, ease(seg(t, 0.2, 1.8)), INK);
     const BOT = 452, TOP = 186, lvl = (f) => lerp(BOT, TOP, f);
@@ -241,31 +250,90 @@ window.defineStory = function (L) {
     c.globalCompositeOperation = 'multiply'; c.fillStyle = warm; c.fillRect(-sheet.w / 2, -sheet.h / 2, sheet.w, sheet.h);
     c.restore();
   };
-  WORLD.crown = (c, t, o) => {
-    L.paper(c, 'first');
-    c.save();
-    const s = 0.8, ox = 1300 - 700 * s, oy = 250;
-    c.translate(ox, oy); c.scale(s, s);
-    c.strokeStyle = INK; for (let i = 0; i < 14; i++) { c.globalAlpha = 0.5 - i * 0.032; c.lineWidth = 1.3; const y = 1000 + Math.pow(i, 1.5) * 4.4; c.beginPath(); c.moveTo(-1400, y); c.lineTo(2400, y); c.stroke(); }
-    c.globalAlpha = 1;
-    c.drawImage(IMG.column, 340, 445, 720, 555);
-    const tip = ease(seg(t, 1.6, 2.7)), fall = seg(t, 2.7, 3.7), settle = seg(t, 3.7, 4.5);
-    let x = -22 * tip, y = -6 * tip, rot = -16 * tip;
-    if (fall > 0) { x = lerp(-22, -420, easeOut(fall)); y = lerp(-6, 290, fall * fall); rot = lerp(-16, -94, easeOut(fall)); }
-    if (settle > 0) { const b = Math.sin(settle * PI) * (1 - settle); x = -420 - 14 * easeOut(settle); y = 290 - 38 * b; rot = -94 + 4 * easeOut(settle) - 5 * b; }
-    c.fillStyle = `rgba(58,34,24,${0.22 * seg(t, 3.5, 4.5)})`; c.beginPath(); c.ellipse(70, 1004, 210, 16, 0, 0, TAU); c.fill();
-    c.save(); c.translate(440 + 250 + x, 93 + 392 + y); c.rotate(rot * PI / 180);
-    c.globalAlpha = 0.78; c.drawImage(IMG.crown, -250, -392, 500, 392); c.globalAlpha = 1;
+  // the crown, drawn about the bottom centre of its band
+  function crownPose(c, x, y, rot, s, t, gleam = 0) {
+    c.save(); c.translate(x, y); c.rotate(rot); c.scale(s, s);
+    c.globalAlpha = 0.8; c.drawImage(IMG.crown, -250, -392, 500, 392); c.globalAlpha = 1;
     c.drawImage(L.GOLD_CROWN, -250, -392, 500, 392);
-    const gl = o.gleamAt ? seg(t, o.gleamAt - 0.3, o.gleamAt + 2.4) : 0;
-    c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.4 + 0.2 * Math.sin(t * 1.3) + (gl > 0 && gl < 1 ? 0.6 * Math.sin(gl * PI) : 0);
+    c.globalCompositeOperation = 'screen'; c.globalAlpha = clamp(0.35 + 0.15 * Math.sin(t * 1.3) + 0.65 * gleam);
     c.drawImage(L.GOLD_CROWN, -250, -392, 500, 392);
-    c.restore(); c.restore();
+    c.restore();
+  }
+  // the frontispiece: a crown on a column in a quiet marble hall. With o.fallAt it tips and falls; without, it lies on the floor.
+  const FRONT = { px: 1180, pb: 1000, ps: 0.74, sC: 0.56, LX: 1392 };
+  WORLD.crown = (c, t, o = {}) => {
+    L.paper(c, o.dawn ? 'first' : 'day');
+    const VY = 612, f = 900, h = 2.4, P = (x, z) => [960 + (f * x) / z, VY + (f * h) / z];
+    c.strokeStyle = 'rgba(43,26,18,.1)'; c.lineWidth = 1;
+    for (let y = 70; y < VY; y += 30) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+    for (let row = 0, y = 70; y < VY; y += 30, row++) for (let x = (row % 2) * 90; x < W; x += 180) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 30); c.stroke(); }
+    const fl = [P(-40, 1.5), P(40, 1.5), P(40, 60), P(-40, 60)];
+    c.fillStyle = 'rgb(240,232,218)'; c.beginPath(); fl.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
+    for (let zi = 1.4; zi < 60; zi += 1.4) {
+      const z1 = zi + 1.4, rowH = P(0, zi)[1] - P(0, z1)[1]; if (rowH < 0.6) break;
+      for (let xi = -20; xi < 20; xi++) {
+        if ((xi + Math.round(zi / 1.4)) % 2 === 0) continue; const x0 = xi * 1.4;
+        const q = [P(x0, zi), P(x0 + 1.4, zi), P(x0 + 1.4, z1), P(x0, z1)];
+        c.fillStyle = `rgba(150,120,90,${0.12 * Math.min(1, rowH / 6)})`; c.beginPath(); q.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
+      }
+    }
+    c.strokeStyle = 'rgba(43,26,18,.16)'; c.beginPath();
+    for (let x = -28; x <= 28; x += 1.4) { const a = P(x, 1.5), b = P(x, 60); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); } c.stroke();
+    c.strokeStyle = 'rgba(43,26,18,.5)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, VY); c.lineTo(W, VY); c.stroke();
+    // a pool of light on the column
+    c.save(); c.globalCompositeOperation = 'screen';
+    const pl = c.createRadialGradient(FRONT.px, 520, 0, FRONT.px, 520, 900); pl.addColorStop(0, 'rgba(255,238,200,.35)'); pl.addColorStop(1, 'rgba(255,238,200,0)');
+    c.fillStyle = pl; c.fillRect(0, 0, W, H); c.restore();
+    c.fillStyle = 'rgba(58,34,24,.22)'; c.beginPath(); c.ellipse(FRONT.px + 40, FRONT.pb + 2, 250, 20, 0, 0, TAU); c.fill();
+    pedestal(c, FRONT.px, FRONT.pb, FRONT.ps);
+    // the crown
+    const sC = FRONT.sC, top = FRONT.pb - (PED_H - 45) * FRONT.ps, piv = [FRONT.px + 250 * sC, top], LY = FRONT.pb - 250 * sC;
+    let x = FRONT.LX, y = LY, rot = 1.52, lying = 1;
+    if (o.fallAt !== undefined) {
+      const u = t - o.fallAt;
+      const tipped = (r) => [piv[0] - 250 * sC * Math.cos(r), piv[1] - 250 * sC * Math.sin(r)];
+      if (u < 1.1) { rot = u < 0 ? 0 : 0.3 * easeIn(u / 1.1) + 0.03 * Math.sin(u * 9) * (1 - u / 1.1) * (u > 0 ? 1 : 0); [x, y] = tipped(Math.max(0, rot)); lying = 0; }
+      else if (u < 2.0) { const v = (u - 1.1) / 0.9, [x0, y0] = tipped(0.3); x = lerp(x0, FRONT.LX, v); y = y0 + (LY - y0) * v * v; rot = lerp(0.3, 1.66, v); lying = v; }
+      else { const w = clamp((u - 2.0) / 0.9), b = Math.sin(w * PI) * (1 - w); y = LY - 26 * b; rot = 1.66 - 0.14 * easeOut(w) + 0.05 * b; }
+    }
+    c.fillStyle = `rgba(58,34,24,${0.24 * lying})`; c.beginPath(); c.ellipse(FRONT.LX + 110, FRONT.pb + 2, 150, 14, 0, 0, TAU); c.fill();
+    const g = o.gleamAt !== undefined ? Math.sin(clamp(seg(t, o.gleamAt - 0.3, o.gleamAt + 2.4)) * PI) : 0;
+    crownPose(c, x, y, rot, sC, t, g);
+    if (o.dawn) {                                               // first light, from a high window on the left
+      c.save(); c.globalCompositeOperation = 'screen';
+      const sh = c.createLinearGradient(200, 0, 1300, 1000); sh.addColorStop(0, 'rgba(255,236,200,.4)'); sh.addColorStop(1, 'rgba(255,236,200,0)');
+      c.fillStyle = sh; c.beginPath(); c.moveTo(80, 0); c.lineTo(520, 0); c.lineTo(1700, H); c.lineTo(1000, H); c.closePath(); c.fill(); c.restore();
+    }
   };
 
+  // the figures are drawn in line only; a paper-coloured silhouette under each lets the near ones stand in front of the far ones
+  function silhouette(cv) {
+    const w = cv.width, h = cv.height, d = cv.getContext('2d').getImageData(0, 0, w, h).data, r = Math.max(1, Math.round(h / 90));
+    const solid = new Uint8Array(w * h), dil = new Uint8Array(w * h), out = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) solid[i] = d[i * 4 + 3] > 24 ? 1 : 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!solid[y * w + x]) continue;
+      for (let yy = Math.max(0, y - r); yy <= Math.min(h - 1, y + r); yy++) for (let xx = Math.max(0, x - r); xx <= Math.min(w - 1, x + r); xx++) dil[yy * w + xx] = 1;
+    }
+    const st = [];
+    for (let x = 0; x < w; x++) { st.push(x, (h - 1) * w + x); }
+    for (let y = 0; y < h; y++) { st.push(y * w, y * w + w - 1); }
+    while (st.length) { const i = st.pop(); if (out[i] || dil[i]) continue; out[i] = 1; const x = i % w, y = (i / w) | 0; if (x > 0) st.push(i - 1); if (x < w - 1) st.push(i + 1); if (y > 0) st.push(i - w); if (y < h - 1) st.push(i + w); }
+    // erode back to the drawn outline: this also removes the specks the dilation grew
+    const keep = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (out[y * w + x]) continue; let ok = 1;
+      for (let yy = Math.max(0, y - r); ok && yy <= Math.min(h - 1, y + r); yy++) for (let xx = Math.max(0, x - r); xx <= Math.min(w - 1, x + r); xx++) if (out[yy * w + xx]) { ok = 0; break; }
+      keep[y * w + x] = ok;
+    }
+    const f = mk(w, h), g = f.getContext('2d'), im = g.createImageData(w, h);
+    for (let i = 0; i < w * h; i++) if (keep[i]) { im.data[i * 4] = 242; im.data[i * 4 + 1] = 235; im.data[i * 4 + 2] = 220; im.data[i * 4 + 3] = 255; }
+    g.putImageData(im, 0, 0);
+    return f;
+  }
   const MIPS = [IMG.s1, IMG.s2, IMG.s3, IMG.s4, IMG.s5, IMG.s6].map((img) => [16, 32, 64, 128, 256, 480].map((h) => {
     const w = Math.max(1, Math.round((img.width / img.height) * h)), cv = mk(w, h), g = cv.getContext('2d');
-    g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, h); return cv;
+    g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, h); cv.fill = silhouette(cv); return cv;
   }));
   const spriteAt = (i, px) => { for (const cv of MIPS[i]) if (cv.height >= px) return cv; return MIPS[i][MIPS[i].length - 1]; };
   const CROWD = (() => {
@@ -302,90 +370,313 @@ window.defineStory = function (L) {
     c.beginPath(); c.moveTo(0, 915); c.quadraticCurveTo(180, 880, 350, 885); c.stroke();
     c.restore();
   }
-  WORLD.throne = (c, t, o = {}) => {
-    L.paper(c, 'day');
-    const VX = 960, VY = 470, f = 900, camH = 3.2;
-    const X = (x, z) => VX + (f * x) / z, Y = (y, z) => VY + (f * (camH - y)) / z;
-    const dr = o.drift ? 1 + 0.045 * ease(clamp(t / o.drift)) : 1;
-    c.save(); c.translate(VX, VY); c.scale(dr, dr); c.translate(-VX, -VY);
-    // light through the great doors
-    c.save(); c.globalCompositeOperation = 'screen';
-    const gl = c.createRadialGradient(VX, VY - 30, 0, VX, VY - 30, 820);
-    gl.addColorStop(0, 'rgba(255,226,170,.55)'); gl.addColorStop(1, 'rgba(255,200,120,0)');
-    c.fillStyle = gl; c.fillRect(0, 0, W, H); c.restore();
-    // floor
-    c.strokeStyle = 'rgba(43,26,18,.26)'; c.lineWidth = 1;
-    for (let x = -10.8; x <= 10.8; x += 1.2) { c.beginPath(); c.moveTo(X(x, 3), Y(0, 3)); c.lineTo(X(x, 60), Y(0, 60)); c.stroke(); }
-    for (let z = 3; z < 60; z *= 1.1) { c.beginPath(); c.moveTo(X(-11, z), Y(0, z)); c.lineTo(X(11, z), Y(0, z)); c.stroke(); }
-    c.strokeStyle = 'rgba(43,26,18,.45)'; c.beginPath(); c.moveTo(0, VY); c.lineTo(W, VY); c.stroke();
-    // the carpet runs from the dais down the aisle to the doors
-    const cz = (z) => [[X(-0.8, z), Y(0, z)], [X(0.8, z), Y(0, z)]];
-    const [a0, b0] = cz(3.4), [a1, b1] = cz(60);
-    c.save(); c.beginPath(); c.moveTo(a0[0], 930); c.lineTo(b0[0], 930); c.lineTo(b1[0], b1[1]); c.lineTo(a1[0], a1[1]); c.closePath(); c.clip();
-    const cg = c.createLinearGradient(0, VY, 0, 930); cg.addColorStop(0, 'rgb(112,44,36)'); cg.addColorStop(1, 'rgb(132,40,32)');
-    c.fillStyle = cg; c.fillRect(0, VY, W, 930 - VY);
-    c.strokeStyle = 'rgba(40,10,8,.35)'; c.lineWidth = 1; for (let z = 3.4; z < 60; z *= 1.06) { c.beginPath(); c.moveTo(X(-2, z), Y(0, z)); c.lineTo(X(2, z), Y(0, z)); c.stroke(); }
+  /* ============================================================ the hall: one building, seen from the throne or up the aisle */
+  // Everything is placed in world units (x across, y up, z away) and drawn back to front. The nave is lined with an arcade
+  // of columns; above the arches a clerestory lets in shafts of light; a coffered barrel vault closes it overhead.
+  const BAY = 4.2, COLX = 9.4, COLR = 0.55, CAP = 8, WALLTOP = 14, VR = COLX;
+  const STONE = 'rgb(244,238,226)', STONE_D = 'rgb(226,216,198)', LINE = (a) => `rgba(43,26,18,${a})`;
+  const BANNER = new Set([1, 3, 5, 7, 9]);
+  function hallCam(view, camZ = 0) {
+    return view === 'doors' ? { VX: 960, VY: 470, f: 900, h: 3.2, z: camZ, end: 60 } : { VX: 960, VY: 452, f: 1000, h: 1.9, z: camZ, end: 31 };
+  }
+  const hallP = (K, x, y, z) => [K.VX + (K.f * x) / (z - K.z), K.VY + (K.f * (K.h - y)) / (z - K.z)];
+  function poly(c, pts, fill, stroke, lw = 1) {
+    c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath();
+    if (fill) { c.fillStyle = fill; c.fill(); }
+    if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw; c.stroke(); }
+  }
+  // the pedestal from the first image: the engraved capital, a fluted shaft beneath it, and a moulded base
+  const colFill = (() => { let p; return () => { if (!p) { p = mk(720, 555); const g = p.getContext('2d'); g.drawImage(IMG.columnFill, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = 'rgb(246,240,228)'; g.fillRect(0, 0, 720, 555); } return p; }; })();
+  const PED_H = 945;                                   // in the column image's pixels: 555 of capital and shaft, 300 more shaft, 90 of base
+  function pedestal(c, cx, yb, s, alpha = 1) {
+    c.save(); c.globalAlpha = alpha; c.translate(cx, yb); c.scale(s, s); c.translate(-360, -PED_H);
+    // the shaft continues below the engraving: its own lower rows, repeated down to the base
+    const cf = colFill();
+    c.drawImage(cf, 0, 0, 720, 520, 0, 0, 720, 520); c.drawImage(IMG.column, 0, 0, 720, 520, 0, 0, 720, 520);
+    for (let y = 520; y < 858; y += 130) { const hh = Math.min(130, 858 - y); c.drawImage(cf, 0, 390, 720, hh, 0, y, 720, hh); c.drawImage(IMG.column, 0, 390, 720, hh, 0, y, 720, hh); }
+    // the base: a rounded torus over a square plinth, engraved like the capital
+    c.beginPath(); c.moveTo(182, 852); c.lineTo(550, 852); c.quadraticCurveTo(592, 866, 550, 884); c.lineTo(182, 884); c.quadraticCurveTo(140, 866, 182, 852); c.closePath();
+    c.fillStyle = 'rgb(246,240,228)'; c.fill(); c.strokeStyle = LINE(0.85); c.lineWidth = 2; c.stroke();
+    c.save(); c.clip(); c.strokeStyle = LINE(0.45); c.lineWidth = 1; for (let y = 856; y < 884; y += 3.2) { c.beginPath(); c.moveTo(430 + (y - 868) ** 2 * 0.3, y); c.lineTo(600, y); c.stroke(); }
+    for (let y = 874; y < 884; y += 2.5) { c.beginPath(); c.moveTo(150, y); c.lineTo(560, y); c.stroke(); } c.restore();
+    poly(c, [[136, 884], [596, 884], [596, 945], [136, 945]], 'rgb(242,235,221)', LINE(0.85), 2);
+    c.strokeStyle = LINE(0.5); c.lineWidth = 1; for (let x = 470; x < 596; x += 4.5) { c.beginPath(); c.moveTo(x, 888); c.lineTo(x, 942); c.stroke(); }
+    c.strokeStyle = LINE(0.35); c.beginPath(); c.moveTo(136, 892); c.lineTo(596, 892); c.stroke();
     c.restore();
-    c.strokeStyle = '#c99a3e'; c.lineWidth = 2; c.beginPath(); c.moveTo(a0[0] + 6, 930); c.lineTo(a1[0], a1[1]); c.moveTo(b0[0] - 6, 930); c.lineTo(b1[0], b1[1]); c.stroke();
-
-    const crowd = (pred) => {
-      for (const p2 of CROWD) {
-        if (!pred(p2.z)) continue;
-        const hp = (f * p2.h) / p2.z, x = X(p2.x, p2.z), yf = Y(0, p2.z);
-        const haze = 1 - Math.min(0.65, p2.z / 380);
-        if (hp < 3) { c.globalAlpha = haze * (hp < 1.2 ? 0.1 : 0.35); c.fillStyle = INK; c.fillRect(x, yf - hp, 1, Math.max(1, hp)); continue; }
-        let bow = 0;
-        if (o.bowAt !== undefined) {
-          const u = t - o.bowAt - p2.k * 0.045;
-          bow = u < 0 ? 0 : u < 0.7 ? ease(u / 0.7) : u < 2.4 ? 1 : 1 - ease(clamp((u - 2.4) / 1.0));
-        }
-        const img = spriteAt(p2.s, hp), w = (img.width / img.height) * hp;
-        c.globalAlpha = haze;
-        c.save(); c.translate(x, yf); c.rotate(bow * 0.42 * (p2.x < 0 ? 1 : -1)); c.scale(1, 1 - 0.16 * bow); if (p2.flip) c.scale(-1, 1);
-        c.drawImage(img, -w / 2, -hp, w, hp); c.restore();
+  }
+  // the crown, lying on its side on the floor
+  function fallenCrown(c, x, y, s, t, gleam = 0) {
+    c.fillStyle = 'rgba(58,34,24,.24)'; c.beginPath(); c.ellipse(x + 200 * s, y + 2, 270 * s, 24 * s, 0, 0, TAU); c.fill();
+    crownPose(c, x, y - 250 * s, 1.52, s, t, gleam);
+  }
+  function drawHall(c, t, o) {
+    const K = hallCam(o.view, o.camZ || 0), P = (x, y, z) => hallP(K, x, y, z), near = K.z + 0.7, END = K.end;
+    const cols = []; for (let z = 6; z < END - 1.5; z += BAY) cols.push(z);
+    L.paper(c, o.paper || 'day');
+    // --- the floor: polished marble in large squares, and the carpet
+    const zf = Math.max(near, K.z + 0.7);
+    poly(c, [P(-COLX, 0, zf), P(COLX, 0, zf), P(COLX, 0, END), P(-COLX, 0, END)], 'rgb(238,230,215)');
+    for (let zi = Math.floor(zf / 1.4) * 1.4; zi < END; zi += 1.4) {
+      const z0 = Math.max(zf, zi), z1 = Math.min(END, zi + 1.4); if (z1 <= z0) continue;
+      const rowH = P(0, 0, z0)[1] - P(0, 0, z1)[1]; if (rowH < 0.6) break;
+      for (let xi = -7; xi < 7; xi++) {
+        if ((xi + Math.round(zi / 1.4)) % 2 === 0) continue;
+        const x0 = xi * 1.4, x1 = x0 + 1.4;
+        poly(c, [P(x0, 0, z0), P(x1, 0, z0), P(x1, 0, z1), P(x0, 0, z1)], `rgba(150,120,90,${0.13 * Math.min(1, rowH / 6)})`);
       }
-      c.globalAlpha = 1;
-    };
-    crowd((z) => z > 60);
-    // side walls and the back wall with its great doorway
-    const wallFill = 'rgba(244,238,226,1)';
-    for (const sgn of [-1, 1]) {
-      const poly = [[X(sgn * 11, 5), Y(0, 5)], [X(sgn * 11, 60), Y(0, 60)], [X(sgn * 11, 60), Y(16, 60)], [X(sgn * 11, 5), Y(16, 5)]];
-      c.fillStyle = wallFill; c.beginPath(); poly.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
-      new Etch().addAll(hatch(poly, 90, 7, 0, 5), 0.6, 0.3).draw(c);
     }
-    const back = (x0, x1, y0, y1) => { const poly = [[X(x0, 60), Y(y0, 60)], [X(x1, 60), Y(y0, 60)], [X(x1, 60), Y(y1, 60)], [X(x0, 60), Y(y1, 60)]]; c.fillStyle = wallFill; c.beginPath(); poly.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill(); new Etch().addAll(hatch(poly, 0, 3.2, 0, 7), 0.6, 0.35).draw(c); return poly; };
-    back(-11, -5, 0, 16); back(5, 11, 0, 16); back(-5, 5, 10, 16);
-    c.strokeStyle = 'rgba(43,26,18,.7)'; c.lineWidth = 1.2;
-    c.beginPath(); c.moveTo(X(-5, 60), Y(0, 60)); c.lineTo(X(-5, 60), Y(10, 60)); c.lineTo(X(5, 60), Y(10, 60)); c.lineTo(X(5, 60), Y(0, 60)); c.stroke();
-    crowd((z) => z <= 60);
-    // columns, rising out of the frame
-    for (const zc of [9, 12.5, 17, 23, 31, 42, 56]) for (const sgn of [-1, 1]) {
-      const xc = sgn * 9.4, w = 0.55;
-      const x0 = X(xc - w, zc), x1 = X(xc + w, zc), yb = Y(0, zc), yt = Y(16, zc);
-      c.fillStyle = wallFill; c.fillRect(x0, yt, x1 - x0, yb - yt);
-      c.strokeStyle = 'rgba(43,26,18,.8)'; c.lineWidth = 1.2; c.strokeRect(x0, yt, x1 - x0, yb - yt);
-      c.strokeStyle = 'rgba(43,26,18,.35)'; c.lineWidth = 0.8;
-      const n = Math.max(3, Math.round((x1 - x0) / 5));
-      for (let q = 1; q < n; q++) { const xx = x0 + ((x1 - x0) * q) / n; if (sgn * (q / n - 0.5) > -0.1) { c.beginPath(); c.moveTo(xx, yt); c.lineTo(xx, yb); c.stroke(); } }
-      c.fillStyle = 'rgba(43,26,18,.5)'; c.fillRect(x0 - (x1 - x0) * 0.15, yb - (x1 - x0) * 0.3, (x1 - x0) * 1.3, (x1 - x0) * 0.3);
-    }
+    c.strokeStyle = LINE(0.16); c.lineWidth = 1; c.beginPath();
+    for (let x = -COLX + 0.2; x <= COLX; x += 1.4) { const a = P(x, 0, zf), b = P(x, 0, END); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); }
+    c.stroke();
+    // reflections of the light in the polished floor
+    const [lx, ly] = P(0, 0, END);
+    c.save(); c.globalCompositeOperation = 'screen';
+    const rg = c.createLinearGradient(0, ly, 0, H); rg.addColorStop(0, 'rgba(255,230,180,.28)'); rg.addColorStop(1, 'rgba(255,230,180,0)');
+    c.fillStyle = rg; c.beginPath(); const [ax] = P(-2.4, 0, END), [bx] = P(2.4, 0, END), [nx] = P(-6, 0, zf), [mx] = P(6, 0, zf);
+    c.moveTo(ax, ly); c.lineTo(bx, ly); c.lineTo(mx, H + 50); c.lineTo(nx, H + 50); c.fill(); c.restore();
+    const cz0 = o.carpetFrom ?? zf, cz1 = o.carpetTo ?? END;
+    poly(c, [P(-0.9, 0, Math.max(zf, cz0)), P(0.9, 0, Math.max(zf, cz0)), P(0.9, 0, cz1), P(-0.9, 0, cz1)], 'rgb(126,40,32)');
+    c.strokeStyle = 'rgba(40,10,8,.28)'; c.lineWidth = 1; c.beginPath();
+    for (let z = Math.max(zf, cz0); z < cz1; z *= 1.05) { const a = P(-0.9, 0, z), b = P(0.9, 0, z); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); if (a[1] - P(0, 0, z * 1.05)[1] < 2) break; }
+    c.stroke();
+    c.strokeStyle = '#c99a3e'; c.lineWidth = 1.6; c.beginPath();
+    for (const x of [-0.78, 0.78]) { const a = P(x, 0, Math.max(zf, cz0)), b = P(x, 0, cz1); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); }
+    c.stroke();
+
+    // --- everything that stands, sorted far to near
+    const Q = [];
+    const q = (z, fn) => { if (z > near) Q.push({ z, fn }); };
+    // beyond the doors: the horizon
+    if (o.view === 'doors') q(1e4, () => { const [, hy] = P(0, 0, 1e4); c.strokeStyle = LINE(0.45); c.lineWidth = 1; c.beginPath(); c.moveTo(0, hy); c.lineTo(W, hy); c.stroke(); });
+    // the end wall
+    q(END, () => {
+      const top = []; for (let i = 0; i <= 40; i++) { const u = PI * i / 40; top.push(P(-VR * Math.cos(u), WALLTOP + VR * Math.sin(u), END)); }
+      const wall = [P(-COLX, 0, END), ...top, P(COLX, 0, END)];
+      c.save(); c.beginPath(); wall.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath();
+      let hole = null;
+      if (o.view === 'doors') {                                   // the great doors: an arch, wide open onto the horizon
+        hole = [P(-4, 0, END)]; for (let i = 0; i <= 30; i++) { const u = PI * i / 30; hole.push(P(-4 * Math.cos(u), 7 + 4 * Math.sin(u), END)); } hole.push(P(4, 0, END));
+        hole.slice().reverse().forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath();
+      }
+      c.fillStyle = STONE; c.fill('evenodd'); c.clip('evenodd');
+      const bb = [P(-COLX, 0, END), P(COLX, 0, END), P(COLX, WALLTOP + VR, END), P(-COLX, WALLTOP + VR, END)];
+      new Etch().addAll(hatch(bb, 0, 3.4, 0, 7), 0.6, 0.3).draw(c);
+      c.restore();
+      c.strokeStyle = LINE(0.7); c.lineWidth = 1.2; c.beginPath(); wall.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke();
+      if (hole) {
+        c.beginPath(); hole.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.strokeStyle = LINE(0.85); c.lineWidth = 1.6; c.stroke();
+        for (let i = 0; i <= 12; i++) { const u = PI * i / 12, a = P(-4 * Math.cos(u), 7 + 4 * Math.sin(u), END), b = P(-4.7 * Math.cos(u), 7 + 4.7 * Math.sin(u), END); c.lineWidth = 1; c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+        c.beginPath(); for (let i = 0; i <= 30; i++) { const u = PI * i / 30, p2 = P(-4.7 * Math.cos(u), 7 + 4.7 * Math.sin(u), END); i ? c.lineTo(p2[0], p2[1]) : c.moveTo(p2[0], p2[1]); } c.stroke();
+      }
+      if (o.view === 'throne') {                                 // a tall window of first light behind the throne, and a round one above
+        const win = [P(-1.9, 4.4, END)]; for (let i = 0; i <= 24; i++) { const u = PI * i / 24; win.push(P(-1.9 * Math.cos(u), 12 + 1.9 * Math.sin(u), END)); } win.push(P(1.9, 4.4, END));
+        poly(c, win, 'rgb(255,250,236)', LINE(0.85), 1.6);
+        c.strokeStyle = LINE(0.55); c.lineWidth = 1; c.beginPath();
+        for (const x of [-0.63, 0.63]) { const a = P(x, 4.4, END), b = P(x, 12 + Math.sqrt(1.9 * 1.9 - x * x), END); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); }
+        for (const y of [6.8, 9.2, 11.6]) { const a = P(-1.9, y, END), b = P(1.9, y, END); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); }
+        c.stroke();
+        const [ox, oy] = P(0, 17.6, END), orr = (K.f * 1.4) / (END - K.z);
+        c.fillStyle = 'rgb(255,250,236)'; c.beginPath(); c.arc(ox, oy, orr, 0, TAU); c.fill(); c.strokeStyle = LINE(0.85); c.lineWidth = 1.6; c.stroke();
+        c.lineWidth = 0.8; for (let k = 0; k < 12; k++) { const a = k * TAU / 12; c.beginPath(); c.moveTo(ox + Math.cos(a) * orr * 0.25, oy + Math.sin(a) * orr * 0.25); c.lineTo(ox + Math.cos(a) * orr, oy + Math.sin(a) * orr); c.stroke(); }
+        c.beginPath(); c.arc(ox, oy, orr * 0.25, 0, TAU); c.stroke();
+      }
+    });
+    // bays: the dark side aisle through each arch, the wall above with its clerestory window, and the vault overhead
+    cols.forEach((z0, i) => {
+      const z1 = z0 + BAY; if (z1 > END) return;
+      for (const sg of [-1, 1]) if (z0 > near + 0.2) q((z0 + z1) / 2 + 0.01, () => {
+        const X = sg * COLX, a0 = z0 + COLR, a1 = z1 - COLR, r = (a1 - a0) / 2, zm = (a0 + a1) / 2;
+        const arch = []; for (let k = 0; k <= 24; k++) { const u = PI * k / 24; arch.push(P(X, CAP + r * Math.sin(u), zm - r * Math.cos(u))); }
+        const opening = [P(X, 0, a0), ...arch, P(X, 0, a1)];
+        poly(c, opening, 'rgb(216,203,182)');
+        const back = [P(X + sg * 4, 0, a0), P(X + sg * 4, 0, a1), P(X + sg * 4, CAP + r, a1), P(X + sg * 4, CAP + r, a0)];
+        c.save(); c.beginPath(); opening.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.clip();
+        new Etch().addAll(hatch(opening, 90, 3.2, 0, i * 2 + (sg > 0 ? 1 : 0)), 0.6, 0.3).draw(c);
+        poly(c, back, 'rgba(255,244,222,.35)');
+        c.restore();
+        const wall = [P(X, CAP, z0), P(X, CAP, a0), ...arch, P(X, CAP, a1), P(X, CAP, z1), P(X, WALLTOP, z1), P(X, WALLTOP, z0)];
+        poly(c, wall, STONE_D);
+        c.strokeStyle = LINE(0.2); c.lineWidth = 0.8; c.beginPath();
+        for (let y = CAP + 0.7; y < WALLTOP; y += 0.7) { const a = P(X, y, z0), b = P(X, y, z1); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); }
+        c.stroke();
+        c.beginPath(); arch.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.strokeStyle = LINE(0.85); c.lineWidth = 1.4; c.stroke();
+        const ext = []; for (let k = 0; k <= 24; k++) { const u = PI * k / 24; ext.push(P(X, CAP + (r + 0.35) * Math.sin(u), zm - (r + 0.35) * Math.cos(u))); }
+        c.beginPath(); ext.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.lineWidth = 0.9; c.stroke();
+        const ks = [P(X, CAP + r - 0.05, zm - 0.22), P(X, CAP + r - 0.05, zm + 0.22), P(X, CAP + r + 0.55, zm + 0.3), P(X, CAP + r + 0.55, zm - 0.3)];
+        poly(c, ks, STONE, LINE(0.8), 1);
+        // the cornice, and a clerestory window
+        c.strokeStyle = LINE(0.75); c.lineWidth = 1.3; c.beginPath(); const e0 = P(X, WALLTOP, z0), e1 = P(X, WALLTOP, z1); c.moveTo(e0[0], e0[1]); c.lineTo(e1[0], e1[1]); c.stroke();
+        const w = []; w.push(P(X, 11, zm - 0.6)); for (let k = 0; k <= 12; k++) { const u = PI * k / 12; w.push(P(X, 12.8 + 0.6 * Math.sin(u), zm - 0.6 * Math.cos(u))); } w.push(P(X, 11, zm + 0.6));
+        poly(c, w, 'rgb(255,250,238)', LINE(0.8), 1);
+      });
+      q(z1 + 0.02, () => {                                       // the vault between two ribs: coffers
+        const ring = (z) => { const a = []; for (let k = 0; k <= 36; k++) { const u = PI * k / 36; a.push(P(-VR * Math.cos(u), WALLTOP + VR * Math.sin(u), z)); } return a; };
+        const za = Math.max(z0, near + 0.05), r0 = ring(za), r1 = ring(z1);
+        poly(c, [...r0, ...r1.slice().reverse()], 'rgb(236,228,212)');
+        c.strokeStyle = LINE(0.3); c.lineWidth = 0.9; c.beginPath();
+        for (let k = 3; k < 36; k += 3) { c.moveTo(r0[k][0], r0[k][1]); c.lineTo(r1[k][0], r1[k][1]); }
+        for (const f of [0.33, 0.66]) { if (z0 + BAY * f <= near) continue; const rm = ring(z0 + BAY * f); rm.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); }
+        c.stroke();
+        if (z0 + BAY * 0.33 > near) for (let k = 3; k < 33; k += 6) { const m = ring(z0 + BAY * 0.33), n = ring(z0 + BAY * 0.66); poly(c, [m[k], m[k + 3], n[k + 3], n[k]], LINE(0.07)); }
+      });
+    });
+    // columns, a rib over each pair, and banners on every other one
+    cols.forEach((z, i) => {
+      for (const sg of [-1, 1]) q(z, () => {
+        const X = sg * COLX, [x0, yb] = P(X - COLR, 0, z), [x1, yt] = P(X + COLR, CAP, z), wpx = x1 - x0, u = wpx / (2 * COLR);
+        if (x1 < -50 || x0 > W + 50) return;
+        const yc = yt;
+        poly(c, [[x0 - wpx * 0.2, yb], [x1 + wpx * 0.2, yb], [x1 + wpx * 0.2, yb - 0.32 * u], [x0 - wpx * 0.2, yb - 0.32 * u]], STONE, LINE(0.8), 1.1);
+        poly(c, [[x0 - wpx * 0.1, yb - 0.32 * u], [x1 + wpx * 0.1, yb - 0.32 * u], [x1, yb - 0.6 * u], [x0, yb - 0.6 * u]], STONE, LINE(0.8), 1.1);
+        poly(c, [[x0, yb - 0.6 * u], [x1, yb - 0.6 * u], [x1, yc + 0.45 * u], [x0, yc + 0.45 * u]], STONE, LINE(0.8), 1.2);
+        const n = Math.max(4, Math.round(wpx / 6));
+        c.lineWidth = 0.8;
+        for (let k = 1; k < n; k++) { const xx = x0 + (wpx * k) / n, sh = sg * (k / n - 0.5); c.strokeStyle = LINE(sh > 0 ? 0.5 : 0.22); c.beginPath(); c.moveTo(xx, yb - 0.6 * u); c.lineTo(xx, yc + 0.45 * u); c.stroke(); }
+        poly(c, [[x0, yc + 0.45 * u], [x1, yc + 0.45 * u], [x1 + wpx * 0.25, yc + 0.1 * u], [x0 - wpx * 0.25, yc + 0.1 * u]], STONE, LINE(0.8), 1.1);
+        poly(c, [[x0 - wpx * 0.3, yc + 0.1 * u], [x1 + wpx * 0.3, yc + 0.1 * u], [x1 + wpx * 0.3, yc - 0.3 * u], [x0 - wpx * 0.3, yc - 0.3 * u]], STONE, LINE(0.85), 1.1);
+        for (const vx of [x0 - wpx * 0.12, x1 + wpx * 0.12]) { c.beginPath(); c.arc(vx, yc + 0.02 * u, wpx * 0.14, 0, TAU); c.fillStyle = STONE; c.fill(); c.strokeStyle = LINE(0.8); c.lineWidth = 1; c.stroke(); }
+        // a pilaster runs up from the capital to the vault
+        poly(c, [[x0 + wpx * 0.15, yc - 0.3 * u], [x1 - wpx * 0.15, yc - 0.3 * u], [...P(X + COLR * 0.7, WALLTOP, z)], [...P(X - COLR * 0.7, WALLTOP, z)]], STONE, LINE(0.6), 1);
+        if (BANNER.has(i)) {                                    // a long banner of the house, hung from the cornice
+          const bx0 = X - sg * (COLR + 0.25), bx1 = X - sg * (COLR + 1.45), zb = z - 0.05, top = 12.8, bot = 6.2;
+          const sway = Math.sin(t * 0.7 + i) * 0.04;
+          const pts = [P(bx0, top, zb), P(bx1, top, zb), P(bx1 + sway, bot, zb), P((bx0 + bx1) / 2 + sway, bot + 0.7, zb), P(bx0 + sway, bot, zb)];
+          poly(c, pts, 'rgb(120,34,28)', LINE(0.85), 1);
+          const mxp = pts.reduce((a2, p3) => a2 + p3[0], 0) / 5, myp = pts.reduce((a2, p3) => a2 + p3[1], 0) / 5;
+          c.strokeStyle = '#d0a24a'; c.lineWidth = 1.2; c.beginPath(); pts.forEach(([x, y], k) => { const px2 = mxp + (x - mxp) * 0.8, py2 = myp + (y - myp) * 0.93; k ? c.lineTo(px2, py2) : c.moveTo(px2, py2); }); c.closePath(); c.stroke();
+          const [cx2, cy2] = P((bx0 + bx1) / 2, 10.6, zb), cw = Math.abs(pts[1][0] - pts[0][0]) * 0.5;
+          if (cw > 6) c.drawImage(L.GOLD_CROWN, cx2 - cw / 2, cy2 - cw * 0.4, cw, cw * 0.78);
+          poly(c, [P(bx0 + 0.05, top + 0.25, zb), P(bx1 - 0.05, top + 0.25, zb), P(bx1 - 0.05, top, zb), P(bx0 + 0.05, top, zb)], '#b8841c');
+        }
+      });
+      q(z - 0.2, () => {                                         // the transverse rib
+        const rr = []; for (let k = 0; k <= 36; k++) { const u = PI * k / 36; rr.push(P(-VR * Math.cos(u), WALLTOP + VR * Math.sin(u), z)); }
+        c.beginPath(); rr.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.strokeStyle = LINE(0.75); c.lineWidth = 2.2; c.stroke();
+        const r2 = rr.map(([x, y]) => [x, y + (K.f * 0.3) / (z - K.z)]);
+        c.beginPath(); r2.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.lineWidth = 1; c.stroke();
+      });
+    });
+    // the court
+    if (o.crowd) o.crowd.forEach((p2) => q(p2.z, () => o.drawPerson(p2, P)));
+    if (o.extra) o.extra.forEach((e) => q(e.z, () => e.draw(P, K)));
+    Q.sort((a, b) => b.z - a.z).forEach((it) => it.fn());
+    // shafts of light from the clerestory on the left, falling across the nave
+    c.save(); c.globalCompositeOperation = 'screen';
+    cols.forEach((z0) => {
+      const zm = z0 + BAY / 2; if (zm < near + 2 || zm > END - 1) return;
+      const d = o.sun || [1.0, -1.05, -0.35];
+      const top0 = [-COLX, 13.4, zm - 0.55], top1 = [-COLX, 13.4, zm + 0.55], hit = (p0) => { const k = p0[1] / -d[1]; return [p0[0] + d[0] * k, 0, p0[2] + d[2] * k]; };
+      const f0 = hit(top0), f1 = hit(top1);
+      if (f0[2] < near + 0.5) return;
+      const A = P(...top0), B = P(...top1), C = P(...f1), D = P(...f0);
+      const g = c.createLinearGradient(A[0], A[1], C[0], C[1]); g.addColorStop(0, `rgba(255,236,196,${0.16 * (o.shaft ?? 1)})`); g.addColorStop(1, 'rgba(255,236,196,0)');
+      c.fillStyle = g; c.beginPath(); c.moveTo(A[0], A[1]); c.lineTo(B[0], B[1]); c.lineTo(C[0], C[1]); c.lineTo(D[0], D[1]); c.closePath(); c.fill();
+    });
+    const [gx, gy] = o.view === 'doors' ? P(0, 7, END) : P(0, 10, END);
+    const gl = c.createRadialGradient(gx, gy, 0, gx, gy, 900);
+    gl.addColorStop(0, `rgba(255,228,170,${0.5 * (o.glow ?? 1)})`); gl.addColorStop(1, 'rgba(255,200,120,0)');
+    c.fillStyle = gl; c.fillRect(0, 0, W, H);
     c.restore();
-    // warm the whole hall, and darken its edges
+    return { P, K };
+  }
+  // a person of the court, standing on the floor of the hall
+  function courtier(c, p2, P, bow = 0, haze = 1) {
+    const [x, yf] = P(p2.x, 0, p2.z), hp = yf - P(p2.x, p2.h, p2.z)[1];
+    if (hp < 3) { c.globalAlpha = haze * (hp < 1.2 ? 0.1 : 0.35); c.fillStyle = INK; c.fillRect(x, yf - hp, 1, Math.max(1, hp)); c.globalAlpha = 1; return; }
+    const img = spriteAt(p2.s, hp), w = (img.width / img.height) * hp;
+    c.globalAlpha = haze;
+    c.save(); c.translate(x, yf); c.rotate(bow * 0.42 * (p2.x < 0 ? 1 : -1)); c.scale(1, 1 - 0.16 * bow); if (p2.flip) c.scale(-1, 1);
+    if (img.fill && hp > 14) c.drawImage(img.fill, -w / 2, -hp, w, hp);
+    c.drawImage(img, -w / 2, -hp, w, hp); c.restore(); c.globalAlpha = 1;
+  }
+  WORLD.throne = (c, t, o = {}) => {
+    const dr = o.drift ? 1 + 0.045 * ease(clamp(t / o.drift)) : 1;
+    c.save(); c.translate(960, 470); c.scale(dr, dr); c.translate(-960, -470);
+    drawHall(c, t, { view: 'doors', glow: o.glow ?? 1, crowd: CROWD, drawPerson: (p2, P) => {
+      let bow = 0;
+      if (o.bowAt !== undefined) { const u = t - o.bowAt - p2.k * 0.045; bow = u < 0 ? 0 : u < 0.7 ? ease(u / 0.7) : u < 2.4 ? 1 : 1 - ease(clamp((u - 2.4) / 1.0)); }
+      courtier(c, p2, P, bow, 1 - Math.min(0.65, p2.z / 380));
+    } });
+    c.restore();
     c.save(); c.globalCompositeOperation = 'multiply';
-    const vg = c.createRadialGradient(VX, VY, 250, VX, VY + 100, 1250);
-    vg.addColorStop(0, 'rgb(255,246,228)'); vg.addColorStop(0.7, 'rgb(226,200,160)'); vg.addColorStop(1, 'rgb(120,88,58)');
+    const vg = c.createRadialGradient(960, 470, 250, 960, 570, 1250);
+    vg.addColorStop(0, 'rgb(255,248,234)'); vg.addColorStop(0.7, 'rgb(234,214,180)'); vg.addColorStop(1, 'rgb(150,114,80)');
     c.fillStyle = vg; c.fillRect(0, 0, W, H); c.restore();
     // the edge of the dais you sit on: one polished band of dark stone, a gilt rule, the carpet running over it
-    const dg = c.createLinearGradient(0, 960, 0, H);
-    dg.addColorStop(0, 'rgb(74,52,36)'); dg.addColorStop(1, 'rgb(34,22,14)');
+    const dg = c.createLinearGradient(0, 960, 0, H); dg.addColorStop(0, 'rgb(74,52,36)'); dg.addColorStop(1, 'rgb(34,22,14)');
     c.fillStyle = dg; c.fillRect(0, 960, W, H - 960);
     c.fillStyle = 'rgba(255,230,180,.08)'; c.fillRect(0, 962, W, 6);
     const rim = c.createLinearGradient(0, 952, 0, 964); rim.addColorStop(0, '#f0cf82'); rim.addColorStop(1, '#8a5e10');
     c.fillStyle = rim; c.fillRect(0, 952, W, 10);
-    const cw0 = X(0.8, 3.4) - VX;
-    c.fillStyle = 'rgb(128,38,30)'; c.beginPath(); c.moveTo(VX - cw0, 952); c.lineTo(VX + cw0, 952); c.lineTo(VX + cw0 * 1.25, H); c.lineTo(VX - cw0 * 1.25, H); c.fill();
-    c.strokeStyle = '#c99a3e'; c.lineWidth = 2; c.beginPath(); c.moveTo(VX - cw0 + 6, 952); c.lineTo(VX - cw0 * 1.25 + 6, H); c.moveTo(VX + cw0 - 6, 952); c.lineTo(VX + cw0 * 1.25 - 6, H); c.stroke();
+    const cw0 = 190;
+    c.fillStyle = 'rgb(128,38,30)'; c.beginPath(); c.moveTo(960 - cw0, 952); c.lineTo(960 + cw0, 952); c.lineTo(960 + cw0 * 1.25, H); c.lineTo(960 - cw0 * 1.25, H); c.fill();
+    c.strokeStyle = '#c99a3e'; c.lineWidth = 2; c.beginPath(); c.moveTo(960 - cw0 + 14, 952); c.lineTo(960 - cw0 * 1.25 + 16, H); c.moveTo(960 + cw0 - 14, 952); c.lineTo(960 + cw0 * 1.25 - 16, H); c.stroke();
+    if (o.door > 0) {                                           // flying into the light of the doors
+      c.save(); c.globalCompositeOperation = 'screen';
+      const g = c.createRadialGradient(960, 440, 0, 960, 440, 700);
+      g.addColorStop(0, `rgba(255,244,220,${o.door})`); g.addColorStop(1, 'rgba(255,230,190,0)');
+      c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
+    }
+  };
+  // the same hall at first light, seen up the aisle: the throne empty, the pedestal bare, the crown on the floor
+  const HB = { zD: 24.4, throneZ: 27.4, pedX: -1.55, pedZ: 21.6, crownX: -0.15, crownZ: 21.2 };
+  const COURT_B = (() => {
+    const r = rng(41), a = [];
+    for (let z = 7.5; z < 22.5; z += 1.5) for (let j = 0; j < 3; j++) for (const sg of [-1, 1]) a.push({ z: z + (r() - 0.5) * 0.25, x: sg * (2.7 + j * 1.25 + (r() - 0.5) * 0.15), s: Math.floor(r() * 6), flip: sg > 0, h: 1.75 * (0.92 + r() * 0.14) });
+    return a;
+  })();
+  const hallCrownAt = (camZ) => hallP(hallCam('throne', camZ), HB.crownX, 0.3, HB.crownZ);
+  function throneAndDais(c, P, K) {
+    const steps = 3, sd = 0.7, sh = 0.32, zD = HB.zD, hw = 3.6;
+    for (let k = steps - 1; k >= 0; k--) {
+      const zf = zD + k * sd, yT = (k + 1) * sh;
+      poly(c, [P(-hw, yT, zf), P(hw, yT, zf), P(hw, yT, zf + sd), P(-hw, yT, zf + sd)], 'rgb(238,230,214)');
+      poly(c, [P(-hw, yT - sh, zf), P(hw, yT - sh, zf), P(hw, yT, zf), P(-hw, yT, zf)], 'rgb(214,202,180)', LINE(0.8), 1.2);
+      const [gx0, gy0] = P(-hw, yT, zf), [gx1] = P(hw, yT, zf); c.fillStyle = '#b8841c'; c.fillRect(gx0, gy0 - 1.2, gx1 - gx0, 2.4);
+      poly(c, [P(-0.9, yT - sh, zf), P(0.9, yT - sh, zf), P(0.9, yT, zf), P(0.9, yT, zf + sd), P(-0.9, yT, zf + sd), P(-0.9, yT, zf)], 'rgb(126,40,32)');
+    }
+    // a canopy of red cloth, swagged from a gilded rod
+    const zc = HB.throneZ + 0.9, rodY = 7.4;
+    const [r0x, r0y] = P(-2.4, rodY, zc), [r1x] = P(2.4, rodY, zc), u = (K.f) / (zc - K.z);
+    for (const sg of [-1, 1]) {
+      const pts = []; for (let k = 0; k <= 20; k++) { const v = k / 20; pts.push([lerp(960 + sg * (r1x - 960) * 0.15, 960 + sg * (r1x - 960) * 1.02, v) + (sg * Math.sin(v * PI) * 0.2 * u), r0y + v * v * 0.6 * u + Math.sin(v * PI) * 1.1 * u]); }
+      const fall = [P(sg * 2.45, rodY, zc), P(sg * 2.45, 1.0, zc), P(sg * 1.85, 1.0, zc), P(sg * 2.0, 5.2, zc)];
+      poly(c, fall, 'rgb(112,30,26)', LINE(0.8), 1);
+      c.strokeStyle = 'rgba(30,6,4,.35)'; c.lineWidth = 1; for (let k = 1; k < 5; k++) { const a = P(sg * (2.45 - k * 0.1), rodY, zc), b = P(sg * (2.45 - k * 0.1), 1.2 + k * 0.6, zc); c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); }
+    }
+    const swag = []; for (let k = 0; k <= 30; k++) { const v = k / 30; swag.push(P(lerp(-2.4, 2.4, v), rodY - 0.9 * Math.sin(v * PI), zc - 0.05)); }
+    poly(c, [...swag, P(2.4, rodY, zc), P(-2.4, rodY, zc)], 'rgb(126,36,30)', LINE(0.8), 1);
+    c.strokeStyle = '#d0a24a'; c.lineWidth = 1.4; c.beginPath(); swag.forEach(([x, y], k) => (k ? c.lineTo(x, y + 3) : c.moveTo(x, y + 3))); c.stroke();
+    c.fillStyle = '#c99a3e'; c.fillRect(r0x - 6, r0y - 4, r1x - r0x + 12, 7);
+    // the throne
+    const tz = HB.throneZ, ty = steps * sh, X = (x) => P(x, 0, tz)[0], Y = (y) => P(0, ty + y, tz)[1];
+    const tg = c.createLinearGradient(X(-1.3), 0, X(1.3), 0); tg.addColorStop(0, '#7c5410'); tg.addColorStop(0.45, '#e8c068'); tg.addColorStop(1, '#7c5410');
+    const back = [[X(-1.15), Y(0.9)], [X(-1.15), Y(3.2)], ...ellipsePts(X(0), Y(3.2), X(1.15) - X(0), (X(1.15) - X(0)) * 0.7, PI, TAU, 30), [X(1.15), Y(0.9)]];
+    poly(c, back, tg, INK, 1.6);
+    const inner = back.map(([x, y]) => [X(0) + (x - X(0)) * 0.74, Y(0.95) + (y - Y(0.95)) * 0.86]);
+    poly(c, inner, 'rgb(122,32,28)', INK, 1);
+    c.save(); c.beginPath(); inner.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y))); c.clip(); new Etch().addAll(hatch(inner, 90, 3.4, 0, 3), 0.6, 0.35).draw(c); c.restore();
+    const cw = (X(1.15) - X(0)) * 0.9; c.drawImage(L.GOLD_CROWN, X(0) - cw / 2, Y(3.2) - (X(1.15) - X(0)) * 0.7 - cw * 0.72, cw, cw * 0.78);
+    poly(c, [[X(-1.45), Y(1.0)], [X(1.45), Y(1.0)], [X(1.45), Y(0.75)], [X(-1.45), Y(0.75)]], tg, INK, 1.2);
+    poly(c, [[X(-1.5), Y(0.75)], [X(1.5), Y(0.75)], [X(1.5), Y(0.55)], [X(-1.5), Y(0.55)]], 'rgb(122,32,28)', INK, 1);
+    for (const sg of [-1, 1]) {
+      poly(c, [[X(sg * 1.5) - 5, Y(1.75)], [X(sg * 1.5) + 5, Y(1.75)], [X(sg * 1.5) + 5, Y(0)], [X(sg * 1.5) - 5, Y(0)]], tg, INK, 1.2);
+      c.beginPath(); c.arc(X(sg * 1.5), Y(1.75), 10, 0, TAU); c.fillStyle = '#e0b152'; c.fill(); c.strokeStyle = INK; c.stroke();
+      c.beginPath(); c.arc(X(sg * 1.5), Y(1.75), 4.5, 0, TAU); c.stroke();
+    }
+  }
+  WORLD.hallEnd = (c, t, o = {}) => {
+    const camZ = o.camZ || 0;
+    drawHall(c, t, { view: 'throne', paper: 'first', camZ, carpetTo: HB.zD, glow: 1.15, shaft: 1.4, sun: [1.0, -0.75, -0.55],
+      crowd: COURT_B, drawPerson: (p2, P) => courtier(c, p2, P, 0, 1 - Math.min(0.3, p2.z / 80)),
+      extra: [
+        { z: HB.zD + 1.4, draw: (P, K) => throneAndDais(c, P, K) },
+        { z: HB.pedZ, draw: (P, K) => { const [x, y] = P(HB.pedX, 0, HB.pedZ); pedestal(c, x, y, (K.f * 3.0) / (HB.pedZ - K.z) / PED_H); } },
+        { z: HB.crownZ, draw: (P, K) => { const [x, y] = P(HB.crownX, 0, HB.crownZ); const g = o.gleamAt !== undefined ? Math.sin(clamp(seg(t, o.gleamAt - 0.3, o.gleamAt + 2.4)) * PI) : 0; fallenCrown(c, x, y, (K.f * 1.35) / (HB.crownZ - K.z) / 500, t, g); } },
+      ] });
+    c.save(); c.globalCompositeOperation = 'multiply';
+    const vg = c.createRadialGradient(960, 520, 300, 960, 560, 1250); vg.addColorStop(0, 'rgb(255,250,240)'); vg.addColorStop(1, 'rgb(150,136,120)');
+    c.fillStyle = vg; c.fillRect(0, 0, W, H); c.restore();
   };
   WORLD.bed = (c, t, o = {}) => {
     // First person, like the throne: you look down the length of your own bed. The duvet is drawn the way an
@@ -498,33 +789,67 @@ window.defineStory = function (L) {
       c.bezierCurveTo(fx + fh * 0.34, fy - fh * 0.45, fx + fh * 0.3, fy, fx, fy); c.bezierCurveTo(fx - fh * 0.3, fy, fx - fh * 0.34, fy - fh * 0.45, fx, fy - fh); c.fill();
     }
   }
+  const STUDY = (() => {
+    // built once: the engraved room, without the lamp's flame or the light
+    const cv = mk(), c = cv.getContext('2d'), r = rng(19);
+    c.drawImage(PAPER.day, 0, 0);
+    const e = new Etch();
+    // ashlar: courses of dressed stone, each block shaded on its lower edge
+    for (let row = 0, y = 0; y < 820; y += 64, row++) {
+      e.add([[0, y], [W, y]], 0.9, 0.55);
+      for (let x = (row % 2) * 110 - 110; x < W; x += 220) { e.add([[x, y], [x, y + 64]], 0.9, 0.5); e.addAll(hatch([[x + 4, y + 50], [x + 216, y + 50], [x + 216, y + 62], [x + 4, y + 62]], 0, 3.2, 0.6, row * 31 + x), 0.5, 0.35); }
+    }
+    // the arched window: night outside, in dense cross-hatching, with a curtain drawn back
+    const wx = 1160, wy = 90, ww = 330, wh = 470, arch = ellipsePts(wx + ww / 2, wy + ww / 2, ww / 2, ww / 2, PI, TAU, 48);
+    const opening = [[wx, wy + wh], [wx, wy + ww / 2], ...arch, [wx + ww, wy + wh]];
+    c.fillStyle = 'rgb(246,240,228)'; c.beginPath(); opening.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
+    e.addAll(hatch(opening, 0, 3.0, 0, 3), 0.7, 0.9).addAll(hatch(opening, 90, 5.5, 0, 4), 0.5, 0.55);
+    e.add([...opening, opening[0]], 2.4);
+    e.add([[wx - 22, wy + wh], [wx - 22, wy + ww / 2], ...ellipsePts(wx + ww / 2, wy + ww / 2, ww / 2 + 22, ww / 2 + 22, PI, TAU, 48), [wx + ww + 22, wy + wh]], 1.4);
+    for (let k = 0; k <= 10; k++) { const a = PI + (k / 10) * PI; e.add([[wx + ww / 2 + Math.cos(a) * (ww / 2), wy + ww / 2 + Math.sin(a) * (ww / 2)], [wx + ww / 2 + Math.cos(a) * (ww / 2 + 22), wy + ww / 2 + Math.sin(a) * (ww / 2 + 22)]], 1, 0.8); }
+    e.add([[wx - 40, wy + wh], [wx + ww + 40, wy + wh], [wx + ww + 30, wy + wh + 18], [wx - 30, wy + wh + 18], [wx - 40, wy + wh]], 1.6);
+    e.add([[wx + ww / 2, wy], [wx + ww / 2, wy + wh]], 1.3); e.add([[wx, wy + wh * 0.6], [wx + ww, wy + wh * 0.6]], 1.3);
+    // a tall case of scrolls on the right
+    const bx = 1690, by = 150;
+    e.add([[bx, 1000], [bx, by], [W + 10, by]], 2);
+    for (let row = 0; row < 7; row++) {
+      const y = by + 30 + row * 118; e.add([[bx, y], [W, y]], 1.4);
+      for (let k = 0; k < 7; k++) { const cx = bx + 30 + k * 34, cy = y + 30 + (k % 2) * 36 + ((row * 7 + k) % 3) * 8; e.add(ellipsePts(cx, cy, 14, 14, 0, TAU, 20), 1); e.add(ellipsePts(cx, cy, 5, 5, 0, TAU, 10), 0.7, 0.8); }
+    }
+    // the floor: large flags in perspective
+    for (let k = 0; k < 9; k++) { const y = 1000 + k * k * 1.6 + k * 8; e.add([[0, y], [W, y]], 0.9, 0.6); }
+    for (let k = -8; k <= 8; k++) e.add([[960 + k * 160, 1000], [960 + k * 330, H]], 0.8, 0.45);
+    // the desk: a heavy table with turned legs and a carved apron
+    e.add([[620, 752], [1780, 752], [1792, 770], [608, 770], [620, 752]], 2.2);
+    e.add([[640, 770], [1760, 770], [1760, 830], [640, 830], [640, 770]], 1.6);
+    e.addAll(hatch([[642, 772], [1758, 772], [1758, 828], [642, 828]], 0, 3.4, 0, 8), 0.6, 0.6);
+    for (let k = 0; k < 7; k++) e.add(ellipsePts(760 + k * 160, 800, 26, 12, 0, TAU, 24), 1.1);
+    for (const lx of [680, 1720]) {
+      e.add([[lx - 18, 830], [lx - 18, 860], [lx - 30, 880], [lx - 18, 905], [lx - 12, 990], [lx - 24, 1010], [lx + 24, 1010], [lx + 12, 990], [lx + 18, 905], [lx + 30, 880], [lx + 18, 860], [lx + 18, 830]], 1.6);
+      e.addAll(hatch([[lx + 2, 832], [lx + 16, 832], [lx + 16, 1006], [lx + 2, 1006]], 90, 3), 0.6, 0.6);
+    }
+    e.add([[680, 960], [1720, 960]], 1.4);
+    // on the desk: rolled scrolls, an unrolled one with writing, an inkwell and a reed pen
+    for (let k = 0; k < 4; k++) { const sx = 700 + (k % 2) * 30, sy = 744 - k * 16; e.add([[sx, sy], [sx + 170, sy + 4]], 1.2); e.add([[sx, sy + 14], [sx + 170, sy + 18]], 1.2); e.add(ellipsePts(sx + 170, sy + 11, 6, 8, 0, TAU, 14), 1); }
+    e.add([[930, 748], [1250, 748], [1262, 740], [918, 740], [930, 748]], 1.3);
+    e.add(ellipsePts(918, 744, 9, 13, 0, TAU, 18), 1.2); e.add(ellipsePts(1262, 744, 9, 13, 0, TAU, 18), 1.2);
+    e.add(ellipsePts(1310, 740, 18, 7, 0, TAU, 24), 1.2); e.add([[1292, 740], [1294, 718], [1326, 718], [1328, 740]], 1.2);
+    e.add([[1300, 716], [1250, 640]], 1.2); e.add([[1254, 646], [1244, 628], [1262, 638]], 0.9);
+    e.draw(c, 1, INK);
+    c.fillStyle = 'rgba(40,24,14,.5)'; for (let i = 0; i < 6; i++) c.fillRect(950, 742 + (i % 2) * 3, 40 + ((i * 53) % 230), 1.2);
+    // the moon, a little of it, through the window
+    c.fillStyle = 'rgb(246,240,228)'; c.beginPath(); c.arc(wx + 240, wy + 150, 26, 0, TAU); c.fill();
+    c.strokeStyle = INK; c.lineWidth = 1; c.stroke();
+    return cv;
+  })();
   WORLD.study = (c, t, o = {}) => {
     // Marcus Aurelius at his desk, at night, writing to himself
-    L.paper(c, 'day');
-    const e = new Etch();
-    // an arched window with the night in it
-    const wx = 1180, wy = 110, ww = 300, wh = 420;
-    e.add([[wx, wy + wh], [wx, wy + ww / 2], ...ellipsePts(wx + ww / 2, wy + ww / 2, ww / 2, ww / 2, PI, TAU, 40), [wx + ww, wy + wh], [wx, wy + wh]], 2);
-    e.add([[wx + ww / 2, wy], [wx + ww / 2, wy + wh]], 1.2); e.add([[wx, wy + wh * 0.62], [wx + ww, wy + wh * 0.62]], 1.2);
-    e.addAll(hatch([[wx + 4, wy + wh - 4], [wx + 4, wy + ww / 2], [wx + ww / 2, wy + 4], [wx + ww - 4, wy + ww / 2], [wx + ww - 4, wy + wh - 4]], 0, 3.2, 0, 2), 0.7, 0.85);
-    // the stone wall around it
-    e.addAll(hatch([[0, 0], [W, 0], [W, 700], [0, 700]], 90, 16, 6, 9), 0.5, 0.2);
-    // the desk
-    e.add([[640, 760], [1760, 760], [1740, 790], [660, 790], [640, 760]], 2);
-    e.add([[700, 790], [700, 1080]], 2); e.add([[1700, 790], [1700, 1080]], 2);
-    e.addAll(hatch([[660, 790], [1740, 790], [1740, 800], [660, 800]], 0, 3), 0.7, 0.8);
-    // a scroll unrolled across it, with lines of writing
-    e.add([[900, 740], [1260, 740], [1270, 752], [890, 752], [900, 740]], 1.3);
-    e.add(ellipsePts(890, 746, 10, 14), 1.2); e.add(ellipsePts(1270, 746, 10, 14), 1.2);
-    e.draw(c, 1, INK);
-    c.fillStyle = 'rgba(40,24,14,.5)'; for (let i = 0; i < 5; i++) c.fillRect(930, 743 + (i % 2) * 4, 60 + ((i * 41) % 220), 1.4);
-    oilLamp(c, 1360, 752, t);
-    // Marcus: the bearded figure from the court, standing at his desk
-    c.strokeStyle = 'rgba(43,26,18,.35)'; c.lineWidth = 1; for (let y = 1000; y < H; y += 14 + (y - 1000) * 0.2) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
-    c.fillStyle = 'rgba(40,24,14,.28)'; c.beginPath(); c.ellipse(1520, 1062, 190, 18, 0, 0, TAU); c.fill();
-    const img = IMG.s1, h = 720, w = (img.width / img.height) * h;
-    c.save(); c.translate(1580, 1066); c.scale(-1, 1); c.drawImage(img, -w / 2, -h, w, h); c.restore();
-    lampLight(c, 1470, 700, 1150, t);
+    c.drawImage(STUDY, 0, 0);
+    oilLamp(c, 1400, 752, t);
+    c.fillStyle = 'rgba(40,24,14,.28)'; c.beginPath(); c.ellipse(1540, 1062, 190, 18, 0, 0, TAU); c.fill();
+    const img = IMG.s1, h = 740, w = (img.width / img.height) * h;
+    c.save(); c.translate(1580, 1070); c.scale(-1, 1); c.drawImage(spriteAt(0, 480).fill, -w / 2, -h, w, h); c.drawImage(img, -w / 2, -h, w, h); c.restore();
+    lampLight(c, 1480, 700, 1250, t);
   };
   WORLD.tablet = (c, t, o = {}) => {
     // the question, cut into stone, lit from the side
@@ -559,7 +884,10 @@ window.defineStory = function (L) {
       e.add([[cx - sw / 2 - 16, top - 34], [cx, top - 92], [cx + sw / 2 + 16, top - 34]], 1.4);
       e.addAll(hatch([[cx - sw / 2 + 2, top - 36], [cx, top - 86], [cx + sw / 2 - 2, top - 36]], 0, 5, 1, i), 0.6, 0.5);
       e.addAll(hatch([[cx - sw / 2 + 4, top + 16], [cx + sw / 2 - 4, top + 16], [cx + sw / 2 - 4, base - 2], [cx - sw / 2 + 4, base - 2]], 0, 7, 3, i + 20), 0.5, 0.25);
-      out.push({ cx, e, stop: 0.28 + r() * 0.5, label: ['draft', 'analysis', 'script', 'dashboard', 'essay', 'app', 'plan', 'email'][i] });
+      const sc = new Etch();
+      for (const sx of [cx - sw / 2 - 16, cx - 20, cx + sw / 2 + 16]) sc.add([[sx, base + 14], [sx, top - 110]], 1, 0.8);
+      for (let y = base - 40; y > top - 100; y -= 70) { sc.add([[cx - sw / 2 - 26, y], [cx + sw / 2 + 26, y]], 1, 0.8); sc.add([[cx - sw / 2 - 16, y], [cx - 20, y - 70]], 0.7, 0.6); sc.add([[cx + sw / 2 + 16, y], [cx - 20, y - 70]], 0.7, 0.6); }
+      out.push({ cx, e, sc, stop: 0.28 + r() * 0.5, label: ['draft', 'analysis', 'script', 'dashboard', 'essay', 'app', 'plan', 'email'][i] });
     }
     return out;
   })();
@@ -567,7 +895,7 @@ window.defineStory = function (L) {
     L.paper(c, 'day');
     c.strokeStyle = 'rgba(43,26,18,.5)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, 806); c.lineTo(W, 806); c.stroke();
     WINGS.forEach((wg, i) => {
-      const born = 0.6 + i * 0.55, k = easeOut(seg(t, born, born + 0.3));
+      const born = (o.tabsAt ?? 0.6) + i * 0.55, k = easeOut(seg(t, born, born + 0.3));
       if (k <= 0) return;
       // the tab: flat, modern, and out of place in an engraving
       c.globalAlpha = k;
@@ -579,6 +907,8 @@ window.defineStory = function (L) {
       c.strokeStyle = 'rgba(43,26,18,.25)'; c.lineWidth = 1; c.setLineDash([3, 5]); c.beginPath(); c.moveTo(wg.cx, 192); c.lineTo(wg.cx, 360); c.stroke(); c.setLineDash([]);
       const grow = ease(seg(t, born + 0.3, born + 2.6)) * wg.stop;
       const gone = seg(t, o.abandonAt + i * 0.25, o.abandonAt + i * 0.25 + 1.6);
+      c.fillStyle = `rgba(58,34,24,${0.12 * k})`; c.beginPath(); c.ellipse(wg.cx, 806, 110, 9, 0, 0, TAU); c.fill();
+      wg.sc.draw(c, clamp(grow / wg.stop * 1.2), INK, 0.28 * k * (1 - gone));
       wg.e.draw(c, grow, INK, lerp(1, 0.22, gone) * k);
       c.globalAlpha = 1;
     });
@@ -636,10 +966,25 @@ window.defineStory = function (L) {
   WORLD.mirror = (c, t, o = {}) => {
     if (!o.noPaper) L.paper(c, 'dusk');
     c.save(); c.translate(CX, 520); const z = lerp(1, 1.08, ease(clamp(t / (o.d || 16)))); c.scale(z, z); c.translate(-CX, -520);
-    // two servants hold it up to you
-    for (const [i, x, flip] of [[1, 590, false], [3, 1340, true]]) {
-      const img = IMG['s' + (i + 1)], h = 620, w = (img.width / img.height) * h;
-      c.save(); c.translate(x, 1040); if (flip) c.scale(-1, 1); c.drawImage(img, -w / 2, -h, w, h); c.restore();
+    // the floor, and two servants standing either side of the glass they have brought you
+    const FL = 1262;
+    c.strokeStyle = 'rgba(43,26,18,.5)'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-600, FL); c.lineTo(W + 600, FL); c.stroke();
+    c.strokeStyle = 'rgba(43,26,18,.22)'; c.lineWidth = 1; c.beginPath(); for (let k = -10; k <= 10; k++) { c.moveTo(CX + k * 150, FL); c.lineTo(CX + k * 260, FL + 260); } for (let k = 1; k < 6; k++) { c.moveTo(-600, FL + k * k * 9); c.lineTo(W + 600, FL + k * k * 9); } c.stroke();
+    c.fillStyle = 'rgba(40,24,14,.2)'; c.beginPath(); c.ellipse(CX, FL + 4, 520, 26, 0, 0, TAU); c.fill();
+    for (const [i, x, flip] of [[1, CX - 520, false], [3, CX + 520, true]]) {
+      const img = IMG['s' + (i + 1)], h = 820, w = (img.width / img.height) * h;
+      c.save(); c.translate(x, FL); if (flip) c.scale(-1, 1); c.drawImage(spriteAt(i, 480).fill, -w / 2, -h, w, h); c.drawImage(img, -w / 2, -h, w, h); c.restore();
+    }
+    // the stand: two turned posts, splayed feet, the glass swung between them
+    for (const sg of [-1, 1]) {
+      const x = CX + sg * 352;
+      c.fillStyle = 'rgb(242,235,221)'; c.fillRect(x - 11, 470, 22, FL - 470);
+      c.strokeStyle = INK; c.lineWidth = 1.6; c.strokeRect(x - 11, 470, 22, FL - 470);
+      c.lineWidth = 0.8; c.strokeStyle = 'rgba(43,26,18,.5)'; for (let y = 474; y < FL; y += 5) { c.beginPath(); c.moveTo(x + 3 * sg, y); c.lineTo(x + 10 * sg, y); c.stroke(); }
+      for (const y of [560, 760, 980]) { c.beginPath(); c.ellipse(x, y, 17, 8, 0, 0, TAU); c.fillStyle = 'rgb(242,235,221)'; c.fill(); c.strokeStyle = INK; c.lineWidth = 1.2; c.stroke(); }
+      c.beginPath(); c.moveTo(x, 470); c.lineTo(x - 12, 440); c.quadraticCurveTo(x, 400, x + 12, 440); c.closePath(); c.fillStyle = '#d0a24a'; c.fill(); c.strokeStyle = INK; c.stroke();
+      c.beginPath(); c.moveTo(x - 90, FL); c.quadraticCurveTo(x, FL - 40, x + 90, FL); c.strokeStyle = INK; c.lineWidth = 2; c.stroke();
+      c.beginPath(); c.arc(x - sg * 18, 520, 7, 0, TAU); c.fillStyle = '#b8841c'; c.fill(); c.stroke();
     }
     const f = seg(t, 0.8, 2.4);
     c.save(); c.beginPath(); c.ellipse(CX, 500, 250, 330, 0, 0, TAU); c.clip();
@@ -665,91 +1010,6 @@ window.defineStory = function (L) {
     c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = 'rgb(118,116,140)'; c.fillRect(0, 0, W, H); c.restore();
     stars(c, t, 90, 17, 0.5);
   };
-  // the hall again, seen from the aisle: the throne on its dais, empty, the crown on the floor
-  const COURT_SIDES = (() => {
-    const r = rng(41), a = [];
-    for (let z = 3.6; z < 9.6; z *= 1.12) for (let j = 0; j < 3; j++) for (const sgn of [-1, 1]) a.push({ z: z * (1 + (r() - 0.5) * 0.03), x: sgn * (2.4 + j * 1.2 + (r() - 0.5) * 0.2), s: Math.floor(r() * 6), flip: sgn > 0, h: 1.75 * (0.92 + r() * 0.14) });
-    return a.sort((p2, q) => q.z - p2.z);
-  })();
-  WORLD.hallEnd = (c, t, o = {}) => {
-    L.paper(c, 'first');
-    const VX = 960, VY = 420, f = 1000, camH = 1.8;
-    const X = (x, z) => VX + (f * x) / z, Y = (y, z) => VY + (f * (camH - y)) / z;
-    const dr = 1 + 0.03 * ease(clamp(t / (o.d || 18)));
-    c.save(); c.translate(VX, 560); c.scale(dr, dr); c.translate(-VX, -560);
-    // first light through tall windows behind the throne
-    c.save(); c.globalCompositeOperation = 'screen';
-    for (const sgn of [-1, 1]) {
-      const gx = X(sgn * 3.2, 16), gy = Y(9, 16);
-      const rg = c.createLinearGradient(gx, gy, VX + sgn * 200, 1080);
-      rg.addColorStop(0, 'rgba(255,236,200,.5)'); rg.addColorStop(1, 'rgba(255,236,200,0)');
-      c.fillStyle = rg; c.beginPath(); c.moveTo(gx - 40, gy); c.lineTo(gx + 40, gy); c.lineTo(VX + sgn * 520 + 200, 1080); c.lineTo(VX + sgn * 520 - 200, 1080); c.closePath(); c.fill();
-    }
-    c.restore();
-    // floor, back wall with two tall windows
-    c.strokeStyle = 'rgba(43,26,18,.24)'; c.lineWidth = 1;
-    for (let x = -10.8; x <= 10.8; x += 1.2) { c.beginPath(); c.moveTo(X(x, 3), Y(0, 3)); c.lineTo(X(x, 16), Y(0, 16)); c.stroke(); }
-    for (let z = 3; z < 16; z *= 1.1) { c.beginPath(); c.moveTo(X(-11, z), Y(0, z)); c.lineTo(X(11, z), Y(0, z)); c.stroke(); }
-    const bw = [[X(-11, 16), Y(0, 16)], [X(11, 16), Y(0, 16)], [X(11, 16), Y(16, 16)], [X(-11, 16), Y(16, 16)]];
-    c.fillStyle = '#f1ece2'; c.beginPath(); bw.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
-    new Etch().addAll(hatch(bw, 0, 3.4, 0, 5), 0.6, 0.35).draw(c);
-    for (const sgn of [-1, 1]) {
-      const wx0 = X(sgn * 3.2 - 0.9, 16), wx1 = X(sgn * 3.2 + 0.9, 16), wy0 = Y(11, 16), wy1 = Y(4, 16);
-      c.fillStyle = 'rgba(255,248,232,1)'; c.fillRect(Math.min(wx0, wx1), wy0, Math.abs(wx1 - wx0), wy1 - wy0);
-      c.strokeStyle = INK; c.lineWidth = 1.6; c.strokeRect(Math.min(wx0, wx1), wy0, Math.abs(wx1 - wx0), wy1 - wy0);
-    }
-    // the dais: three steps, the carpet climbing them
-    const steps = 3, sd = 0.7, sh = 0.32, z0 = 9.4;
-    for (let k = steps - 1; k >= 0; k--) {
-      const zf = z0 + k * sd, yT = (k + 1) * sh;
-      const top = [[X(-3.4, zf), Y(yT, zf)], [X(3.4, zf), Y(yT, zf)], [X(3.4, zf + sd), Y(yT, zf + sd)], [X(-3.4, zf + sd), Y(yT, zf + sd)]];
-      const front = [[X(-3.4, zf), Y(yT - sh, zf)], [X(3.4, zf), Y(yT - sh, zf)], [X(3.4, zf), Y(yT, zf)], [X(-3.4, zf), Y(yT, zf)]];
-      c.fillStyle = '#ece4d4'; c.beginPath(); top.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
-      c.fillStyle = '#d9cdb6'; c.beginPath(); front.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.fill();
-      c.strokeStyle = INK; c.lineWidth = 1.3; c.beginPath(); front.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.stroke();
-      c.fillStyle = '#b8841c'; c.fillRect(X(-3.4, zf), Y(yT, zf) - 1.5, X(3.4, zf) - X(-3.4, zf), 3);
-      c.fillStyle = 'rgb(128,38,30)';
-      c.beginPath(); c.moveTo(X(-0.8, zf), Y(yT - sh, zf)); c.lineTo(X(0.8, zf), Y(yT - sh, zf)); c.lineTo(X(0.8, zf), Y(yT, zf)); c.lineTo(X(0.8, zf + sd), Y(yT, zf + sd)); c.lineTo(X(-0.8, zf + sd), Y(yT, zf + sd)); c.lineTo(X(-0.8, zf), Y(yT, zf)); c.closePath(); c.fill();
-    }
-    // the throne, empty
-    const tz = z0 + steps * sd + 0.6, ty = steps * sh;
-    const tx = (x) => X(x, tz), tyy = (y) => Y(ty + y, tz);
-    const back = [[tx(-1.3), tyy(0.9)], [tx(-1.3), tyy(3.6)], ...ellipsePts(tx(0), tyy(3.6), tx(1.3) - tx(0), (tx(1.3) - tx(0)) * 0.8, PI, TAU, 30), [tx(1.3), tyy(0.9)]];
-    const tg = c.createLinearGradient(tx(-1.3), 0, tx(1.3), 0); tg.addColorStop(0, '#7c5410'); tg.addColorStop(0.45, '#e2b75a'); tg.addColorStop(1, '#7c5410');
-    c.fillStyle = tg; c.beginPath(); back.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
-    c.strokeStyle = INK; c.lineWidth = 1.6; c.stroke();
-    const inner = back.map(([x, y]) => [tx(0) + (x - tx(0)) * 0.72, tyy(0.9) + (y - tyy(0.9)) * 0.86]);
-    c.fillStyle = 'rgb(120,34,28)'; c.beginPath(); inner.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill();
-    new Etch().addAll(hatch(inner, 90, 4, 0, 3), 0.6, 0.35).draw(c);
-    c.fillStyle = tg; c.fillRect(tx(-1.6), tyy(1.0), tx(1.6) - tx(-1.6), tyy(0.8) - tyy(1.0));
-    c.strokeRect(tx(-1.6), tyy(1.0), tx(1.6) - tx(-1.6), tyy(0.8) - tyy(1.0));
-    for (const sgn of [-1, 1]) { c.fillStyle = tg; c.fillRect(tx(sgn * 1.55) - 6, tyy(1.9), 12, tyy(0) - tyy(1.9)); c.strokeRect(tx(sgn * 1.55) - 6, tyy(1.9), 12, tyy(0) - tyy(1.9)); c.beginPath(); c.arc(tx(sgn * 1.55), tyy(1.9), 12, 0, TAU); c.fillStyle = '#d9a940'; c.fill(); c.stroke(); }
-    // the court, on both sides of the aisle, still waiting
-    for (const p2 of COURT_SIDES) {
-      const hp = (f * p2.h) / p2.z, x = X(p2.x, p2.z), yf = Y(0, p2.z), img = spriteAt(p2.s, hp), w = (img.width / img.height) * hp;
-      c.save(); c.translate(x, yf); if (p2.flip) c.scale(-1, 1); c.globalAlpha = 1 - p2.z / 30; c.drawImage(img, -w / 2, -hp, w, hp); c.restore();
-    }
-    c.globalAlpha = 1;
-    // columns
-    for (const zc of [4.2, 6, 8.4, 11.6, 15]) for (const sgn of [-1, 1]) {
-      const xc = sgn * 9.4, x0 = X(xc - 0.55, zc), x1 = X(xc + 0.55, zc), yb = Y(0, zc), yt = Y(16, zc);
-      c.fillStyle = '#f4efe5'; c.fillRect(x0, yt, x1 - x0, yb - yt); c.strokeStyle = 'rgba(43,26,18,.8)'; c.lineWidth = 1.2; c.strokeRect(x0, yt, x1 - x0, yb - yt);
-      c.strokeStyle = 'rgba(43,26,18,.3)'; c.lineWidth = 0.8; const n = Math.max(3, Math.round((x1 - x0) / 6)); for (let q = 1; q < n; q++) { const xx = x0 + ((x1 - x0) * q) / n; c.beginPath(); c.moveTo(xx, yt); c.lineTo(xx, yb); c.stroke(); }
-    }
-    // the crown, on the floor at the foot of the dais
-    const cz = 5.4, cxp = X(0.62, cz), cyp = Y(0, cz), cs = (f * 0.95) / cz / 392;
-    c.fillStyle = 'rgba(58,34,24,.25)'; c.beginPath(); c.ellipse(cxp + 30 * cs * 5, cyp + 4, 260 * cs, 22 * cs, 0, 0, TAU); c.fill();
-    c.save(); c.translate(cxp, cyp); c.rotate(-1.35); c.scale(cs, cs);
-    c.globalAlpha = 0.8; c.drawImage(IMG.crown, -250, -392, 500, 392); c.globalAlpha = 1; c.drawImage(L.GOLD_CROWN, -250, -392, 500, 392);
-    const gl = o.gleamAt !== undefined ? seg(t, o.gleamAt - 0.3, o.gleamAt + 2.4) : 0;
-    c.globalCompositeOperation = 'screen'; c.globalAlpha = 0.4 + 0.2 * Math.sin(t * 1.3) + (gl > 0 && gl < 1 ? 0.7 * Math.sin(gl * PI) : 0);
-    c.drawImage(L.GOLD_CROWN, -250, -392, 500, 392); c.restore();
-    c.restore();
-    c.save(); c.globalCompositeOperation = 'multiply';
-    const vg = c.createRadialGradient(VX, 560, 300, VX, 560, 1200); vg.addColorStop(0, 'rgb(255,250,240)'); vg.addColorStop(1, 'rgb(150,140,128)');
-    c.fillStyle = vg; c.fillRect(0, 0, W, H); c.restore();
-  };
-
   /* ============================================================ the book */
   const PAGE = { top: 78, bottom: 1002, lx: 116, rx: 1804 }, SPINE = W / 2;
   const PLATE = { x: 1022, y: 318, w: 720, h: 405 };          // 16:9, so the camera can travel into it exactly
@@ -977,12 +1237,16 @@ window.defineStory = function (L) {
       c.font = 'italic 400 24px "IM Fell English"'; c.textAlign = 'center'; c.fillStyle = 'rgba(45,28,18,.7)'; c.fillText(o.plateCaption || 'Plate I.', PLATE.x + PLATE.w / 2, PLATE.y + PLATE.h + 56); c.textAlign = 'left';
       c.font = '400 22px "IM Fell English SC"'; c.letterSpacing = '5px'; c.textAlign = 'center'; c.fillStyle = 'rgba(45,28,18,.7)';
       c.fillText('The Saddest Empires', 1382, 128); c.letterSpacing = '0px'; c.textAlign = 'left';
+      if (o.plateGlow > 0) {                                   // first light falls across the plate
+        c.save(); c.globalCompositeOperation = 'screen'; const g = c.createLinearGradient(PLATE.x, PLATE.y, PLATE.x + PLATE.w, PLATE.y + PLATE.h);
+        g.addColorStop(0, `rgba(255,236,200,${0.25 * o.plateGlow})`); g.addColorStop(1, 'rgba(255,236,200,0)'); c.fillStyle = g; c.fillRect(PLATE.x, PLATE.y, PLATE.w, PLATE.h); c.restore();
+      }
     }
-    const coverLeaf = () => leaf3d(c, o.coverTheta, cover, marbledImg(), { w: LEAF_W + 22, y0: PAGE.top - 16, h: LEAF_H + 34 });
-    const titleLeaf = () => leaf3d(c, o.turnTheta, titlePageImg(), blankLeafImg(), { curl: 0.55 });
-    if (o.coverTheta < PI) { titleLeaf(); coverLeaf(); } else { coverLeaf(); titleLeaf(); }
+    const coverLeaf = () => leaf3d(c, o.coverTheta, cover, o.stackBack ? o.stackBack() : marbledImg(), { w: LEAF_W + 22, y0: PAGE.top - 16, h: LEAF_H + 34 });
+    const titleLeaf = () => { if (o.leafFront !== false) leaf3d(c, o.turnTheta, o.leafFront ? o.leafFront() : titlePageImg(), blankLeafImg(), { curl: 0.55 }); };
+    if (o.coverTheta < PI / 2) { titleLeaf(); coverLeaf(); } else { coverLeaf(); titleLeaf(); }
     // once the leaf lies on the left, it is a page you can write on
-    if (o.turnTheta >= PI) {
+    if (o.turnTheta >= PI - 1e-6) {
       c.font = '400 22px "IM Fell English SC"'; c.letterSpacing = '5px'; c.textAlign = 'center'; c.fillStyle = 'rgba(45,28,18,.7)';
       c.fillText(o.head || 'I · The Throne', 534, 128); c.letterSpacing = '0px'; c.textAlign = 'left';
       if (o.leftPage) o.leftPage(c, t);
@@ -1043,6 +1307,36 @@ window.defineStory = function (L) {
       c.fillStyle = sg2; c.fillRect(x0, y0, x1 - x0, y1 - y0); c.restore();
     }
   }
+  // the left-hand stack as seen from above: the cover's leather rim around the title page
+  const titleStackImg = (() => { let p; return () => {
+    if (!p) {
+      p = mk(LEAF_W + 22, LEAF_H + 34); const g = p.getContext('2d');
+      g.fillStyle = '#3b1f14'; g.fillRect(0, 0, p.width, p.height);
+      for (let k = 4; k >= 1; k--) { g.fillStyle = k % 2 ? '#d9ccb4' : '#c9bb9f'; g.fillRect(22 - k * 2.2, 16 + k * 1.4, LEAF_W, LEAF_H); }
+      g.drawImage(PAPER.day, 240, 60, LEAF_W, LEAF_H, 22, 16, LEAF_W, LEAF_H);
+      const x0 = 22, cx = x0 + LEAF_W / 2;
+      g.textAlign = 'center'; g.fillStyle = 'rgba(40,24,14,.9)';
+      g.font = '400 22px "IM Fell English SC"'; g.letterSpacing = '6px'; g.fillText('On Sovereignty', cx, 250); g.letterSpacing = '0px';
+      g.font = '400 60px "IM Fell English SC"'; g.letterSpacing = '8px'; g.fillText('The Saddest', cx, 380); g.fillText('Empires', cx, 456); g.letterSpacing = '0px';
+      g.strokeStyle = 'rgba(40,24,14,.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx - 130, 500); g.lineTo(cx + 130, 500); g.stroke();
+      g.font = 'italic 400 28px "IM Fell English"'; g.fillText('a story in seven chapters', cx, 552);
+      g.drawImage(L.GOLD_CROWN, cx - 34, 610, 68, 53);
+      g.font = '400 22px "IM Fell English SC"'; g.letterSpacing = '5px'; g.fillText('Samuel Salzer', cx, LEAF_H - 150); g.fillText('mmxxvi', cx, LEAF_H - 116); g.letterSpacing = '0px';
+      const sh = g.createLinearGradient(p.width, 0, p.width - 150, 0); sh.addColorStop(0, 'rgba(60,38,16,.42)'); sh.addColorStop(1, 'rgba(60,38,16,0)'); g.fillStyle = sh; g.fillRect(x0, 16, LEAF_W, LEAF_H);
+    }
+    return p; }; })();
+  // a right-hand page with a plate on it, composed so it can turn as a leaf
+  const leafPage = mk(LEAF_W, LEAF_H), lpg = leafPage.getContext('2d');
+  function platePage(drawPlate, t, caption) {
+    lpg.drawImage(bookBase, SPINE, PAGE.top, LEAF_W, LEAF_H, 0, 0, LEAF_W, LEAF_H);
+    const px = PLATE.x - SPINE, py = PLATE.y - PAGE.top;
+    lpg.strokeStyle = 'rgba(40,24,14,.8)'; lpg.lineWidth = 1.6; lpg.strokeRect(px - 14, py - 14, PLATE.w + 28, PLATE.h + 28);
+    lpg.lineWidth = 0.8; lpg.strokeRect(px - 6, py - 6, PLATE.w + 12, PLATE.h + 12);
+    drawPlate(scx, t); lpg.drawImage(sceneCanvas, px, py, PLATE.w, PLATE.h);
+    lpg.font = 'italic 400 24px "IM Fell English"'; lpg.textAlign = 'center'; lpg.fillStyle = 'rgba(45,28,18,.7)'; lpg.fillText(caption, px + PLATE.w / 2, py + PLATE.h + 56);
+    lpg.font = '400 22px "IM Fell English SC"'; lpg.letterSpacing = '5px'; lpg.fillText('The Saddest Empires', 1382 - SPINE, 128 - PAGE.top); lpg.letterSpacing = '0px'; lpg.textAlign = 'left';
+    return leafPage;
+  }
   const camInto = (k) => ({ s: lerp(1, W / PLATE.w, k), cx: lerp(CX, PLATE.x + PLATE.w / 2, k), cy: lerp(CY, PLATE.y + PLATE.h / 2, k) });
 
   /* ============================================================ the story */
@@ -1052,121 +1346,123 @@ window.defineStory = function (L) {
 
   const charAt = (P, word) => { const plain = P.chars.map((c2) => c2.ch).join(''); const i = plain.indexOf(word); return i < 0 ? P.written : P.chars[i].at; };
   if (L.variant === 'opening' || L.variant === 'complete') {
-    // PROLOGUE: a match, a candle, a book
-    const p1 = passage({ mode: 'top', at: 3.0, night: true, size: 66, y: 64, cps: 13, text: '*This is the story of an empire.*' });
-    const p2 = passage({ mode: 'top', at: p1.written + 0.9, night: true, size: 66, y: 64 + 66 * 1.34, cps: 13, text: '*The greatest the world has ever known.*' });
-    p1.out = p2.out = p2.written + 1.6; p1.gone = p2.gone = p2.out + 0.9;
-    const openAt = p2.gone - 0.2, turnAt = openAt + 4.2, turnD = 2.2;
-    const f1 = passage({ mode: 'bookCentre', at: turnAt + turnD + 0.8, size: 86, cps: 10, text: 'It begins with {you.}', hold: 2.0, sink: true });
-    const into = f1.gone + 0.2, travel = 3.8, d = into + travel;
-    mark('strike', 1.0); mark('title', p1.at); mark('open', openAt); mark('riffle', turnAt, { d: turnD }); mark('begins', f1.at); mark('zoom', into, { d: travel });
-    PASS.push({ scene: SC.length, P: f1 });
-    add({ name: 'prologue', d, passages: [p1, p2], draw(c, t) {
-      const zoom = lerp(0.62, 1, ease(seg(t, openAt - 1.2, openAt + 2.6)));
-      const cam0 = { s: zoom, cx: CX + 420 * (1 - ease(seg(t, openAt - 0.3, openAt + 2.4))), cy: CY - 60 * (1 - zoom) / 0.38 };
-      const k = ease(seg(t, into, into + travel));
-      const coverTheta = PI * ease(seg(t, openAt, openAt + 2.6));
-      const turnTheta = PI * ease(seg(t, turnAt, turnAt + turnD));
-      bookScene(c, t, { cam: k > 0 ? camInto(k) : cam0, coverTheta, turnTheta,
-        plate: t > turnAt - 0.1 ? (x) => WORLD.throne(x, 0, {}) : null,
-        candle: { x: 1905, y: 1010, h: 330, lit: seg(t, 1.0, 1.4), spark: Math.max(0, 1 - Math.abs(t - 1.05) / 0.25) },
-        light: ease(seg(t, 1.0, 4.6)), fill: ease(seg(t, openAt + 0.4, openAt + 2.6)), white: k,
-        spill: Math.sin(seg(t, openAt + 0.3, turnAt + turnD + 1.5) * PI) * 0.8 * (1 - k),
-        dust: (1 - seg(t, turnAt + turnD + 1, turnAt + turnD + 3)) * seg(t, openAt + 0.5, openAt + 1.5), dustAt: openAt + 0.4,
-        sheen: seg(t, 4.4, 6.4),
-        leftPage: (cc) => drawPassage(cc, f1, t) });
-    } });
-
-    // I · THE THRONE
+    const veilOn = (c, t, P, col, amt = 0.8) => { const v = ease(seg(t, P.at - 0.9, P.at)) * (1 - ease(seg(t, P.out, P.gone))); if (v > 0) { c.fillStyle = `rgba(${col},${amt * v})`; c.fillRect(0, 0, W, H); } };
+    const EX = 2.6, EN = 2.6, THRU = 1.1;          // the length of a fly-through into, and out of, a scene; and how long the two overlap
+    // PROLOGUE: a match; a crown on a column, very close; it falls; we pull back into the book
+    {
+      const p1 = passage({ mode: 'side', at: 2.6, size: 64, cps: 13, y: 400, text: '*This is the story of an empire.*', hold: 0, sink: true });
+      const p2 = passage({ mode: 'side', at: p1.written + 0.7, size: 64, cps: 13, y: 630, text: '*The greatest the world has ever known.*', hold: 0, sink: true });
+      const fallAt = p2.written + 0.8, land = fallAt + 2.0;
+      p1.out = p2.out = land + 1.4; p1.gone = p2.gone = p1.out + 1.6;
+      const pullAt = p2.gone - 0.2, pullD = 4.6, turnAt = pullAt + pullD + 1.6, turnD = 2.3;
+      const f1 = passage({ mode: 'bookCentre', at: turnAt + turnD + 0.8, size: 86, cps: 10, text: 'It begins with {you.}', hold: 2.0, sink: true });
+      const into = f1.gone + 0.2, travel = 3.8, d = into + travel;
+      mark('strike', 1.0); mark('title', p1.at); mark('tip', fallAt); mark('land', land); mark('open', pullAt, { d: pullD }); mark('riffle', turnAt, { d: turnD }); mark('begins', f1.at); mark('zoom', into, { d: travel });
+      PASS.push({ scene: SC.length, P: f1 });
+      add({ name: 'prologue', d, passages: [p1, p2], draw(c, t) {
+        const crownPlate = (x) => WORLD.crown(x, t, { fallAt });
+        const pk = ease(seg(t, pullAt, pullAt + pullD)), k = ease(seg(t, into, into + travel));
+        const cam = k > 0 ? camInto(k) : camInto(1 - pk);
+        const turnTheta = PI * ease(seg(t, turnAt, turnAt + turnD)), turning = t >= turnAt;
+        bookScene(c, t, { cam, coverTheta: PI, stackBack: titleStackImg, turnTheta,
+          leafFront: turning ? () => platePage(crownPlate, t, 'Frontispiece.') : false,
+          plate: turning ? (x) => WORLD.throne(x, 0, {}) : crownPlate, plateCaption: turning ? 'Plate I.' : 'Frontispiece.',
+          candle: { x: 1905, y: 1010, h: 330, lit: seg(t, 1.0, 1.4), spark: Math.max(0, 1 - Math.abs(t - 1.05) / 0.25) },
+          light: ease(seg(t, 1.0, 5.0)), fill: ease(seg(t, pullAt, pullAt + pullD)) * 0.9, white: k,
+          spill: Math.sin(seg(t, pullAt + 1, turnAt + turnD + 1.5) * PI) * 0.6 * (1 - k),
+          dust: (1 - seg(t, turnAt + turnD + 1, turnAt + turnD + 3)) * seg(t, turnAt, turnAt + 0.8), dustAt: turnAt,
+          leftPage: (cc) => drawPassage(cc, f1, t) });
+      } });
+    }
+    // I · THE THRONE — ends by flying down the aisle into the light of the great doors
     {
       const q1 = passage({ mode: 'top', at: 1.0, size: 64, text: 'You now sit on the throne.', hold: 1.4 });
       const q2 = passage({ mode: 'top', at: q1.gone + 0.2, text: 'Your servants stand shoulder to shoulder, / as far as the eye can see.', hold: 1.6 });
       const q3 = passage({ mode: 'top', at: q2.gone + 0.2, text: 'They have read everything. They can build anything. / They do not tire, and they do not resent.', hold: 1.8 });
       const q4 = passage({ mode: 'top', at: q3.gone + 0.2, size: 64, text: 'They are waiting for your {instruction.}', hold: 3.8 });
-      const bowAt = charAt(q4, 'instruction') + 0.5, d = q4.gone + 0.4;
-      mark('throne', 0); mark('bow', bowAt); mark('cut', d);
-      add({ name: 'throne', d, passages: [q1, q2, q3, q4], draw(c, t) { WORLD.throne(c, t, { bowAt, drift: d }); scrim(c, 'top', ease(seg(t, 0, 0.9)), false); } });
+      const bowAt = charAt(q4, 'instruction') + 0.5, d = q4.gone + 0.2 + EX;
+      mark('throne', 0); mark('bow', bowAt); mark('fly', d - EX, { d: EX }); mark('cut', d - 0.35);
+      add({ name: 'throne', d, passages: [q1, q2, q3, q4], exit: { x: 960, y: 445, z: 16, d: EX }, xfd: THRU,
+        draw(c, t) { WORLD.throne(c, t, { bowAt, drift: d, door: 0.9 * easeIn(seg(t, d - EX, d)) }); scrim(c, 'top', ease(seg(t, 0, 0.9)) * (1 - seg(t, q4.out, q4.gone)), false); } });
     }
-    // II · THE BED
+    // II · THE BED — out of the glow of the phone; ends by flying up into the palace of light
     {
-      const b1 = passage({ mode: 'lower', at: 1.4, night: true, size: 56, text: 'Of course, you are not in a palace.', hold: 1.3 });
+      const b1 = passage({ mode: 'lower', at: EN + 0.4, night: true, size: 56, text: 'Of course, you are not in a palace.', hold: 1.3 });
       const b2 = passage({ mode: 'lower', at: b1.gone + 0.2, night: true, size: 56, text: 'You are in bed. / You have not brushed your teeth.', hold: 1.5 });
       const b3 = passage({ mode: 'lower', at: b2.gone + 0.2, night: true, size: 52, text: 'You speak a few sentences into the dark, and somewhere, in a place that is not a place, something begins to build for you.', hold: 2.6 });
       const b4 = passage({ mode: 'centre', at: b3.gone + 0.6, night: true, size: 86, cps: 12, text: 'You did not earn this. / You are not dressed.', hold: 3.2 });
       const lettersAt = charAt(b3, 'dark'), buildAt = lettersAt + 2.2;
       mark('bed', 0); mark('dark', lettersAt); mark('earn', b4.at);
-      add({ name: 'bed', d: b4.gone + 2.8, passages: [b1, b2, b3, b4], draw(c, t) {
-        WORLD.bed(c, t, { lettersAt, buildAt });
-        scrim(c, 'lower', 1 - seg(t, b3.out, b3.gone), true);
-        const veil = ease(seg(t, b4.at - 0.9, b4.at)) * (1 - ease(seg(t, b4.out, b4.gone)));
-        if (veil > 0) { c.fillStyle = `rgba(8,8,14,${0.8 * veil})`; c.fillRect(0, 0, W, H); }
-      } });
+      const d = b4.gone + 0.6 + (L.variant === 'opening' ? 2.2 : EX);
+      add({ name: 'bed', d, passages: [b1, b2, b3, b4], enter: { x: 990, y: 700, z: 9, d: EN }, exit: L.variant === 'opening' ? null : { x: 760, y: 300, z: 5, d: EX }, xfd: THRU,
+        draw(c, t) {
+          WORLD.bed(c, t, { lettersAt, buildAt });
+          scrim(c, 'lower', 1 - seg(t, b3.out, b3.gone), true);
+          veilOn(c, t, b4, '8,8,14', 0.8);
+        } });
     }
     if (L.variant === 'complete') {
-      const veilOn = (c, t, P, col, amt = 0.8) => { const v = ease(seg(t, P.at - 0.9, P.at)) * (1 - ease(seg(t, P.out, P.gone))); if (v > 0) { c.fillStyle = `rgba(${col},${amt * v})`; c.fillRect(0, 0, W, H); } };
-      // III · THE INHERITANCE
+      // III · THE INHERITANCE — out of Marcus's window; into his scroll; out of the stone
       {
-        const m1 = passage({ mode: 'side', at: 1.6, night: true, size: 56, text: 'The closest thing to the life you’ve been given is the life of an {emperor.}', hold: 1.4 });
+        const m1 = passage({ mode: 'side', at: EN + 0.6, night: true, size: 56, text: 'The closest thing to the life you’ve been given is the life of an {emperor.}', hold: 1.4 });
         const m2 = passage({ mode: 'side', at: m1.gone + 0.2, night: true, size: 56, text: 'Marcus Aurelius ruled a third of the world. / Every night he wrote himself the same question:', hold: 1.2 });
         mark('chapter', 0); mark('marcus', m1.at);
-        add({ name: 'marcus', d: m2.gone + 0.4, passages: [m1, m2], draw(c, t) {
-          WORLD.study(c, t); chapterMark(c, t, 'III · The Inheritance', true);
-        } });
+        add({ name: 'marcus', d: m2.gone + 0.2 + EX, passages: [m1, m2], enter: { x: 1330, y: 330, z: 4, d: EN }, exit: { x: 1080, y: 746, z: 7, d: EX }, xfd: THRU,
+          draw(c, t) { WORLD.study(c, t); chapterMark(c, t - EN + 0.6, 'III · The Inheritance', true); } });
       }
       {
-        mark('carve', 1.4, { d: 3.2 });
-        add({ name: 'tablet', d: 7.4, passages: [], draw(c, t) { WORLD.tablet(c, t); } });
+        mark('carve', EN + 0.6, { d: 3.2 });
+        add({ name: 'tablet', d: EN + 6.6 + EX, passages: [], enter: { x: 960, y: 535, z: 2.6, d: EN }, exit: { x: 960, y: 535, z: 3.2, d: EX }, xfd: THRU,
+          draw(c, t) { WORLD.tablet(c, t - EN + 0.8); } });
       }
       {
-        const t1 = passage({ mode: 'lower', at: 1.0, size: 52, text: 'He would recognise your morning: / more power than one mind can direct.', hold: 1.4 });
+        const t1 = passage({ mode: 'lower', at: EN + 0.2, size: 52, text: 'He would recognise your morning: / more power than one mind can direct.', hold: 1.4 });
         const t2 = passage({ mode: 'lower', at: t1.gone + 0.2, size: 52, text: 'Eight tabs open. Eight wings of a palace, / abandoned half-built, {for no one.}', hold: 2.6 });
         const abandonAt = charAt(t2, 'abandoned');
-        mark('tabs', 0.6, { d: 4.4 }); mark('abandon', abandonAt);
-        add({ name: 'tabs', d: t2.gone + 0.4, passages: [t1, t2], draw(c, t) { WORLD.tabs(c, t, { abandonAt }); scrim(c, 'lower', 1, false); } });
+        mark('tabs', EN - 1.0, { d: 4.4 }); mark('abandon', abandonAt);
+        add({ name: 'tabs', d: t2.gone + 0.2 + EX, passages: [t1, t2], enter: { x: 960, y: 520, z: 2.4, d: EN }, exit: { x: 843, y: 640, z: 6, d: EX }, xfd: THRU,
+          draw(c, t) { WORLD.tabs(c, t, { abandonAt, tabsAt: EN - 1.0 }); scrim(c, 'lower', 1 - seg(t, t2.out, t2.gone), false); } });
       }
-      // IV · THE INVERSION
+      // IV · THE INVERSION — out of the post of the balance; into the servants on the scale; out of the Line
       {
-        const v1 = passage({ mode: 'top', at: 1.2, size: 50, text: 'For all of history, the limit was {labour.} / You could not build the bridge, or write the symphony, or run the numbers.', hold: 1.6 });
+        const v1 = passage({ mode: 'top', at: EN + 0.4, size: 50, text: 'For all of history, the limit was {labour.} / You could not build the bridge, or write the symphony, or run the numbers.', hold: 1.6 });
         const v2 = passage({ mode: 'top', at: v1.gone + 0.2, size: 54, text: 'Now labour is endless, / and {attention} is the thing that runs out.', hold: 2.8 });
         const pourAt = v2.at, outAt = charAt(v2, 'attention') + 0.4;
         mark('chapter', 0); mark('pour', pourAt, { d: 4.5 }); mark('out', outAt, { d: 3.2 });
-        add({ name: 'balance', d: v2.gone + 0.4, passages: [v1, v2], draw(c, t) {
-          WORLD.balance(c, t, { pourAt, outAt });
-          scrim(c, 'top', 1, false); chapterMark(c, t, 'IV · The Inversion', false, 1046);
-        } });
+        add({ name: 'balance', d: v2.gone + 0.4 + EX, passages: [v1, v2], enter: { x: 960, y: 760, z: 6, d: EN }, exit: { x: 470, y: 690, z: 5, d: EX }, xfd: THRU,
+          draw(c, t) { WORLD.balance(c, t, { pourAt, outAt }); scrim(c, 'top', 1 - seg(t, v2.out, v2.gone), false); chapterMark(c, t - EN + 0.6, 'IV · The Inversion', false, 1046); } });
       }
       {
-        const l1 = passage({ mode: 'top', at: 1.0, text: 'Your servants stand in a line past the castle walls / and over the horizon,', hold: 1.4 });
+        const l1 = passage({ mode: 'top', at: EN, text: 'Your servants stand in a line past the castle walls / and over the horizon,', hold: 1.4 });
         const l2 = passage({ mode: 'top', at: l1.gone + 0.2, size: 58, text: 'waiting for instructions / you do not have {time to give.}', hold: 2.4 });
         const l3 = passage({ mode: 'centre', at: l2.gone + 0.9, size: 84, cps: 12, text: 'The limit is no longer what can be done. / The limit is {you.}', hold: 3.4 });
         const d = l3.gone + 0.6;
         mark('line', 0, { d: l2.gone }); mark('limit', l3.at);
-        add({ name: 'line', d, passages: [l1, l2, l3], draw(c, t) {
-          WORLD.line(c, t, { d: l2.gone + 1.5 }); scrim(c, 'top', 1 - seg(t, l2.out, l2.gone), false);
-          veilOn(c, t, l3, '246,240,229', 0.9);
-        } });
+        add({ name: 'line', d, passages: [l1, l2, l3], enter: { x: 960, y: 620, z: 3, d: EN }, xfd: THRU,
+          draw(c, t) { WORLD.line(c, t, { d: l2.gone + 1.5 }); scrim(c, 'top', 1 - seg(t, l2.out, l2.gone), false); veilOn(c, t, l3, '246,240,229', 0.9); } });
       }
-      // V · THE GAP
+      // V · THE GAP — out of the juice; into the rim of the glass; out of the mirror
       {
-        const g1 = passage({ mode: 'side', at: 1.4, text: 'They bring you apple juice / when you wanted orange.', hold: 1.2 });
+        const g1 = passage({ mode: 'side', at: EN + 0.2, text: 'They bring you apple juice / when you wanted orange.', hold: 1.2 });
         const g2 = passage({ mode: 'side', at: g1.gone + 0.2, text: 'They bring you something ninety percent right, which is worse than fifty, because it shows you {the shape of the gap.}', hold: 2.4 });
         const g3 = passage({ mode: 'side', at: g2.gone + 0.2, text: 'To close it, you would have to say what you want. What *good* means to you. / Most of us have never had to.', hold: 2.4 });
         const apple = [charAt(g1, 'apple') - 0.2, charAt(g1, 'apple') + 2.0], drain = [g1.out, g1.gone + 0.4];
         const o50 = [charAt(g2, 'something') - 0.2, charAt(g2, 'something') + 1.2], o90 = [charAt(g2, 'ninety') - 0.2, charAt(g2, 'ninety') + 1.0];
         const gapAt = charAt(g2, 'shape');
         mark('chapter', 0); mark('pour', apple[0], { d: 2.2 }); mark('pour', o50[0], { d: 1.4 }); mark('pour', o90[0], { d: 1.2 }); mark('gap', gapAt);
-        add({ name: 'glass', d: g3.gone + 0.4, passages: [g1, g2, g3], draw(c, t) {
-          WORLD.glass(c, t, { apple, drain, o50, o90, gapAt }); scrim(c, 'side', 1, false); chapterMark(c, t, 'V · The Gap', false);
-        } });
+        add({ name: 'glass', d: g3.gone + 0.2 + EX, passages: [g1, g2, g3], enter: { x: 1390, y: 600, z: 3, d: EN }, exit: { x: 1390, y: 292, z: 6, d: EX }, xfd: THRU,
+          draw(c, t) { WORLD.glass(c, t, { apple, drain, o50, o90, gapAt }); scrim(c, 'side', 1 - seg(t, g3.out, g3.gone), false); chapterMark(c, t - EN + 0.6, 'V · The Gap', false); } });
       }
       {
-        const r1 = passage({ mode: 'lower', at: 2.6, size: 52, text: 'The mirror they hold up is accurate. / The reflection is bland because the face is bland.', hold: 1.8 });
+        const r1 = passage({ mode: 'side', at: EN + 1.0, size: 56, w: 600, text: 'The mirror they hold up is accurate. / The reflection is bland because the face is bland.', hold: 2.0 });
         const r2 = passage({ mode: 'centre', at: r1.gone + 0.8, night: true, size: 86, cps: 12, text: 'The failure is not the servant. / It is {the king.}', hold: 3.2 });
         const faceAt = charAt(r1, 'reflection') - 0.4, d = r2.gone + 0.8;
         mark('mirror', 0.2); mark('king', r2.at);
-        add({ name: 'mirror', d, passages: [r1, r2], draw(c, t) {
-          L.paper(c, 'dusk'); c.save(); c.translate(CX, 150); c.scale(0.8, 0.8); c.translate(-CX, -150); WORLD.mirror(c, t, { d, faceAt, noPaper: true }); c.restore(); veilOn(c, t, r2, '12,10,14', 0.86);
-        } });
+        add({ name: 'mirror', d, passages: [r1, r2], enter: { x: 1250, y: 470, z: 4, d: EN }, xfd: THRU,
+          draw(c, t) {
+            L.paper(c, 'dusk'); c.save(); c.translate(1250, 470); c.scale(0.72, 0.72); c.translate(-960, -500); WORLD.mirror(c, t, { d, faceAt, noPaper: true }); c.restore();
+            scrim(c, 'side', 0.5 * (1 - seg(t, r1.out, r1.gone)), false); veilOn(c, t, r2, '12,10,14', 0.86);
+          } });
       }
       // VI · THE LETTER
       {
@@ -1174,58 +1470,70 @@ window.defineStory = function (L) {
         const h2 = passage({ mode: 'sheet', voice: 'hand', at: h1.gone + 0.4, cps: 9, size: 104, y: 480, text: 'But you have {no cause.}', hold: 4.4 });
         const lampOut = [h2.written + 0.8, h2.written + 3.4];
         mark('chapter', 0); mark('write', h1.at, { d: h1.written - h1.at }); mark('write', h2.at, { d: h2.written - h2.at }); mark('silence', h2.written + 0.2, { d: 4.4 });
-        add({ name: 'letter', d: h2.gone + 1.2, passages: [h1, h2], rot: -1.4, draw(c, t) {
-          WORLD.letter(c, t, { lampOut, sheetAt: 0.6 }); chapterMark(c, t, 'VI · The Letter', true, 1046);
-        } });
+        add({ name: 'letter', d: h2.gone + 1.2, passages: [h1, h2], rot: -1.4, enter: { x: 960, y: 550, z: 1.25, d: 3 },
+          draw(c, t) { WORLD.letter(c, t, { lampOut, sheetAt: 0.6 }); chapterMark(c, t, 'VI · The Letter', true, 1046); } });
       }
       {
         const e1 = passage({ mode: 'centre', at: 2.2, night: true, size: 76, cps: 12, text: 'We live in an era with / the {saddest empires} / the world has ever known.', hold: 3.6 });
-        const d = e1.gone + 1.0;
+        const d = e1.gone + 0.6 + EX;
         mark('ruins', 0, { d }); mark('saddest', e1.at);
-        add({ name: 'ruins', d, passages: [e1], draw(c, t) { WORLD.ruins(c, t, { d }); veilOn(c, t, e1, '8,8,14', 0.5); } });
+        add({ name: 'ruins', d, passages: [e1], exit: { x: 980, y: 500, z: 4, d: EX + 0.4 }, xfd: THRU + 0.3,
+          draw(c, t) { WORLD.ruins(c, t, { d }); veilOn(c, t, e1, '8,8,14', 0.5); } });
       }
-      // VII · THE CROWN
-      let crownD, gleamAt;
+      // VII · THE CROWN — out of the ruin, into the hall at first light; up the aisle to the crown
+      let crownEnd, gleamAt;
       {
-        const c1 = passage({ mode: 'lower', at: 2.2, size: 58, text: 'The crown is on the floor.', hold: 1.4 });
-        const c2 = passage({ mode: 'lower', at: c1.gone + 0.2, size: 58, text: 'It is heavy. / It was always going to be heavy.', hold: 2.6 });
-        gleamAt = charAt(c1, 'crown'); crownD = c2.gone + 0.4;
-        mark('chapter', 0); mark('dawn', 0, { d: crownD }); mark('gleam', gleamAt);
-        add({ name: 'crown', d: crownD, passages: [c1, c2], draw(c, t) {
-          WORLD.hallEnd(c, t, { d: crownD + 30, gleamAt }); scrim(c, 'lower', 1 - seg(t, c2.out, c2.gone), false); chapterMark(c, t, 'VII · The Crown', false);
-        } });
+        const Z0 = 6.5, Z1 = 14;
+        const c1 = passage({ mode: 'lower', at: EN + 0.8, size: 58, text: 'The crown is on the floor.', hold: 1.4 });
+        const c2 = passage({ mode: 'lower', at: c1.gone + 0.2, size: 58, text: 'It is heavy. / It was always going to be heavy.', hold: 2.2 });
+        const k1 = passage({ mode: 'lower', at: c2.gone + 0.6, size: 52, text: 'You will hit the walls: of context, of tools, of time, / of your own clarity.', hold: 1.8 });
+        const k2 = passage({ mode: 'lower', at: k1.gone + 0.2, size: 52, text: 'Good. If you never hit these limits, / you never know where the {true limit} is.', hold: 2.2 });
+        const k3 = passage({ mode: 'centre', at: k2.gone + 0.8, size: 80, cps: 12, text: 'The bottleneck is the {curriculum.} / The overwhelm is the {syllabus.}', hold: 3.0 });
+        const k4 = passage({ mode: 'lower', at: k3.gone + 0.4, size: 52, text: 'You are not failing to rule. You are learning to, in real time, / because no one in history has ever had to before.', hold: 2.6 });
+        gleamAt = charAt(c1, 'crown');
+        const walkA = c2.gone, walkB = k4.gone + 0.4, d = walkB + EX;
+        const camZ = (t) => lerp(Z0, Z1, ease(seg(t, walkA, walkB)));
+        const [ex, ey] = hallCrownAt(Z1);
+        crownEnd = { x: ex + 70, y: ey - 50 };
+        mark('chapter', 0); mark('dawn', 0, { d: EN + 2 }); mark('gleam', gleamAt); mark('walk', walkA, { d: walkB - walkA }); mark('curriculum', k3.at);
+        add({ name: 'crown', d, passages: [c1, c2, k1, k2, k3, k4], enter: { x: 960, y: 423, z: 3, d: EN + 0.4 }, exit: { x: crownEnd.x, y: crownEnd.y, z: 3.4, d: EX }, xfd: THRU,
+          draw(c, t) {
+            WORLD.hallEnd(c, t, { camZ: camZ(t), gleamAt });
+            scrim(c, 'lower', 1 - seg(t, k4.out, k4.gone), false); chapterMark(c, t - EN + 0.6, 'VII · The Crown', false);
+            veilOn(c, t, k3, '246,240,229', 0.88);
+          } });
       }
-      // EPILOGUE: out of the plate, "Pick it up.", the book closes, the candle goes out
+      // EPILOGUE — the crown, close: "Pick it up."; back out into the book; the book closes; the candle goes out
       {
-        const back = 4.2;
-        const pk = passage({ mode: 'bookCentre', at: back + 0.9, size: 96, cps: 8, text: '{Pick it up.}', hold: 3.6, sink: true });
-        const leafAt = pk.gone + 0.5, leafD = 2.2, coverAt = leafAt + leafD + 0.1, coverD = 2.6;
+        const pk = passage({ mode: 'side', at: EN + 1.2, size: 120, cps: 7, y: 470, text: '{Pick it up.}', hold: 3.4, sink: true });
+        const pullAt = pk.gone + 0.3, pullD = 4.4, leafAt = pullAt + pullD + 0.6, leafD = 2.3, coverAt = leafAt + leafD + 1.8, coverD = 2.6;
         const sheenAt = coverAt + coverD + 0.2, outAt = sheenAt + 2.6, d = outAt + 3.6;
-        mark('zoom', 0, { d: back }); mark('pick', pk.at); mark('riffle', leafAt, { d: leafD }); mark('close', coverAt + coverD - 0.15); mark('snuff', outAt);
-        PASS.push({ scene: SC.length, P: pk });
-        add({ name: 'epilogue', d, passages: [], draw(c, t) {
-          const k = 1 - ease(seg(t, 0, back));
-          const z = ease(seg(t, leafAt, coverAt + coverD + 0.6));
-          const cam = k > 0 ? camInto(k) : { s: lerp(1, 0.62, z), cx: CX + 420 * z, cy: CY - 60 * z };
-          const turnTheta = PI * (1 - ease(seg(t, leafAt, leafAt + leafD)));
-          const coverTheta = PI * (1 - ease(seg(t, coverAt, coverAt + coverD)));
-          const lit = 1 - seg(t, outAt, outAt + 0.35);
-          bookScene(c, t, { cam, coverTheta, turnTheta, head: 'VII · The Crown', plateCaption: 'Plate VII.',
-            plate: (x) => WORLD.hallEnd(x, crownD + t, { d: crownD + 30, gleamAt: crownD + pk.written }),
-            candle: { x: 1905, y: 1010, h: 330, lit, spark: 0, always: true },
-            light: lerp(1, 0.08, ease(seg(t, outAt, outAt + 1.6))), fill: (1 - ease(seg(t, coverAt - 0.4, coverAt + coverD))) * (1 - k) + 0, white: k,
-            spill: 0.5 * (1 - k) * (1 - seg(t, leafAt, coverAt + 1)), dust: 0,
-            sheen: coverTheta === 0 ? seg(t, sheenAt, sheenAt + 2.2) : 0,
-            leftPage: (cc) => drawPassage(cc, pk, t) });
-          // smoke from the snuffed wick
-          const sm = seg(t, outAt, outAt + 3.2);
-          if (sm > 0 && sm < 1) {
-            const fx = CX + (1905 - cam.cx) * cam.s, fy = CY + (1010 - 330 * 1.02 - cam.cy) * cam.s;
-            c.save(); c.strokeStyle = `rgba(200,190,176,${0.35 * Math.sin(sm * PI)})`; c.lineWidth = 2 * cam.s; c.beginPath();
-            for (let i = 0; i <= 40; i++) { const u = i / 40, y = fy - u * 260 * cam.s * (0.4 + sm), x = fx + Math.sin(u * 7 + t * 2) * 14 * u * cam.s; i ? c.lineTo(x, y) : c.moveTo(x, y); }
-            c.stroke(); c.restore();
-          }
-        } });
+        mark('pick', pk.at); mark('open', pullAt, { d: pullD }); mark('riffle', leafAt, { d: leafD }); mark('close', coverAt + coverD - 0.15); mark('snuff', outAt);
+        const lx = FRONT.LX + 110, ly = FRONT.pb - 140;
+        add({ name: 'epilogue', d, passages: [pk], enter: { x: lx, y: ly, z: 2.6, d: EN }, xfd: THRU,
+          draw(c, t) {
+            const k = 1 - ease(seg(t, pullAt, pullAt + pullD));
+            const z = ease(seg(t, coverAt - 0.6, coverAt + coverD + 0.6));
+            const cam = k > 0 ? camInto(k) : { s: lerp(1, 0.62, z), cx: CX + 420 * z, cy: CY - 60 * z };
+            const turnTheta = PI * (1 - ease(seg(t, leafAt, leafAt + leafD)));
+            const coverTheta = PI * (1 - ease(seg(t, coverAt, coverAt + coverD)));
+            const lit = 1 - seg(t, outAt, outAt + 0.35);
+            const dawnPlate = (x) => WORLD.crown(x, t, { dawn: true, gleamAt: pk.written });
+            bookScene(c, t, { cam, coverTheta, stackBack: titleStackImg, turnTheta, head: 'VII · The Crown', plateCaption: 'Plate VII.',
+              leafFront: t >= leafAt ? () => platePage((x) => WORLD.crown(x, t, {}), t, 'Frontispiece.') : null,
+              plate: dawnPlate, plateGlow: 1 - k,
+              candle: { x: 1905, y: 1010, h: 330, lit, spark: 0, always: true },
+              light: lerp(1, 0.08, ease(seg(t, outAt, outAt + 1.6))), fill: (1 - ease(seg(t, coverAt - 0.4, coverAt + coverD))) * (1 - k) * 0.9, white: k,
+              spill: 0.4 * (1 - k) * (1 - seg(t, leafAt, coverAt + 1)), dust: 0,
+              sheen: coverTheta === 0 ? seg(t, sheenAt, sheenAt + 2.2) : 0 });
+            const sm = seg(t, outAt, outAt + 3.2);                 // smoke from the snuffed wick
+            if (sm > 0 && sm < 1) {
+              const fx = CX + (1905 - cam.cx) * cam.s, fy = CY + (1010 - 330 * 1.02 - cam.cy) * cam.s;
+              c.save(); c.strokeStyle = `rgba(200,190,176,${0.35 * Math.sin(sm * PI)})`; c.lineWidth = 2 * cam.s; c.beginPath();
+              for (let i = 0; i <= 40; i++) { const u = i / 40, y = fy - u * 260 * cam.s * (0.4 + sm), x = fx + Math.sin(u * 7 + t * 2) * 14 * u * cam.s; i ? c.lineTo(x, y) : c.moveTo(x, y); }
+              c.stroke(); c.restore();
+            }
+          } });
       }
     }
   } else {
@@ -1357,13 +1665,25 @@ window.defineStory = function (L) {
   /* ------------------------------------------------------------ timeline + render */
   const XF = 1.0;
   let acc = 0;
-  SC.forEach((s, i) => { const hard = i === 0 || ['morning', 'firstpage', 'epilogue', 'throne', 'bed', 'marcus'].includes(s.name); s.t0 = hard ? acc : acc - XF; s.t1 = s.t0 + s.d; acc = s.t1; s.xf = !hard; });
+  SC.forEach((s, i) => {
+    const hard = i === 0 || s.hard || (L.variant === 'story' && ['morning', 'firstpage', 'epilogue', 'throne', 'bed', 'marcus'].includes(s.name));
+    s.xfd = s.xfd ?? XF; s.t0 = hard ? acc : acc - s.xfd; s.t1 = s.t0 + s.d; acc = s.t1; s.xf = !hard;
+  });
   const DURATION = acc;
   const out = document.getElementById('film').getContext('2d');
   const bufA = mk(), bufB = mk();
+  // a scene can open out of a point in the frame (enter) and fly into one (exit): the camera travels through one world into the next
+  function through(c, t, s, draw) {
+    let k = 0, F = null;
+    if (s.enter && t < s.enter.d) { k = Math.pow(1 - clamp(t / s.enter.d), 2.2); F = s.enter; }
+    else if (s.exit && t > s.d - s.exit.d) { k = Math.pow(seg(t, s.d - s.exit.d, s.d), 2.2); F = s.exit; }
+    if (!F || k <= 1e-4) { draw(); return; }
+    const z = Math.pow(F.z, k);
+    c.save(); c.translate(lerp(F.x, CX, k), lerp(F.y, CY, k)); c.scale(z, z); c.translate(-F.x, -F.y); draw(); c.restore();
+  }
   function renderScene(c, s, t) {
     c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.filter = 'none';
-    s.draw(c, t);
+    through(c, t, s, () => s.draw(c, t));
     (s.passages || []).forEach((P) => {
       if (s.rot && P.mode === 'sheet') { c.save(); c.translate(960, 550); c.rotate(s.rot * PI / 180); c.translate(-960, -550); drawPassage(c, P, t); c.restore(); }
       else drawPassage(c, P, t);
@@ -1378,7 +1698,7 @@ window.defineStory = function (L) {
       const buf = k ? bufB : bufA, c = buf.getContext('2d');
       c.clearRect(0, 0, W, H);
       renderScene(c, s, T - s.t0);
-      out.globalAlpha = k === 0 || !s.xf ? 1 : ease(seg(T, s.t0, s.t0 + XF));
+      out.globalAlpha = k === 0 || !s.xf ? 1 : ease(seg(T, s.t0, s.t0 + s.xfd));
       out.drawImage(buf, 0, 0);
     });
     out.globalAlpha = 1;
